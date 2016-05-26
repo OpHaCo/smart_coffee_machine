@@ -228,7 +228,7 @@ void saecoIntelia_update(void)
   if(_au8_coffeePins[arg_e_buttonId] != NOT_USED_COFFEE_PIN)
   {
     digitalWrite(_au8_coffeePins[arg_e_buttonId], HIGH);
-    delay(50);
+    delay(100);
     digitalWrite(_au8_coffeePins[arg_e_buttonId], LOW);
   }
   else
