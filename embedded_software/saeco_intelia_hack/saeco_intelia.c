@@ -178,7 +178,6 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
       attachInterrupt(_au8_coffeePins[loc_u8_index + NB_COFFEE_BUTTONS], 
                       _apf_onButtonStateChangedCbs[loc_u8_index],
                       CHANGE);
-      printf("%d %d ", loc_u8_index, _au8_coffeePins[loc_u8_index + NB_COFFEE_BUTTONS]);
     }
     else
     {
