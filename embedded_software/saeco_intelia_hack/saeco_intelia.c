@@ -161,6 +161,7 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
     else
     {
       pinMode(_au8_coffeePins[loc_u8_index], OUTPUT);
+      digitalWrite(_au8_coffeePins[loc_u8_index], LOW);
     }
   }
   
@@ -215,6 +216,7 @@ void saecoIntelia_update(void)
         _apf_buttonPressCbs[loc_u8_buttonIndex](_a_li_pressDur[loc_u8_buttonIndex]);
         /** reset flag */
         _u32_buttPress &= ~(1<<loc_u8_buttonIndex);
+        _a_li_pressDur[loc_u8_buttonIndex] = 0;
       }
     }
   }
@@ -280,7 +282,13 @@ static void onHiddenBtnChanged(void)
 
 /** IT */
 static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
-{ 
+{   
+  if(_u32_buttPress  & (1 << arg_e_buttonId))
+  {
+    /** Error : button press flag has not been handled on application side - reject new press/release */
+    return;
+  }
+  
   /** button debounced on hw side */
   if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
   {
