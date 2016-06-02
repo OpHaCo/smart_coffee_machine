@@ -293,8 +293,7 @@ static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
   if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
   {
     if(_a_li_pressDur[arg_e_buttonId] == 0 
-      || _a_li_pressDur[arg_e_buttonId] = millis() //check rebound on push and release
-      || (_u32_buttPress >> arg_e_buttonId) & 0x1)
+      || _a_li_pressDur[arg_e_buttonId] = millis()) //check rebound on push and release
     {
       /** Error : button release but did not get button press */
       return;
