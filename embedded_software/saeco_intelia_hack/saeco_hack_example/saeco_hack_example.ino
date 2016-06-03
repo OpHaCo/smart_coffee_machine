@@ -38,7 +38,7 @@
  **************************************************************************/
 static const char* _ssid = "wifi_ssid";
 static const char* _password = "wifi_key";
-static const char* _mqttServer = "mqtt server address";
+static const char* _mqttServer = "mqtt_server_address";
 
 /**************************************************************************
  * Type Definitions
@@ -89,7 +89,6 @@ static PubSubClient _mqttClient(_mqttServer, 1883, onMQTTMsgReceived, _wifiClien
 void setup() {
   Serial.begin(115200);
   delay(10);
-
   setupWifi();
   setupMQTT();
   setupOTA();
