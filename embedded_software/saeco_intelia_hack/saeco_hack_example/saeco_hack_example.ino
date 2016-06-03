@@ -30,6 +30,8 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include "saeco_intelia.h"
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 /**************************************************************************
  * Manifest Constants
@@ -51,8 +53,10 @@ static const char* _mqttServer = "mqtt server address";
  **************************************************************************/
 static void onMQTTMsgReceived(char* topic, byte* payload, unsigned int length);
 static void onSmallCoffeeBtnPress(uint32_t dur);
+static void onPowerBtnPress(uint32_t dur);
 static String macToStr(const uint8_t* mac);
 static void setupWifi(void);
+static void setupOTA(void);
 static void setupSaecoCoffeeMachine(void);
 static void setupMQTT(void);
 static void setupMQTTTopics(void);
@@ -88,6 +92,7 @@ void setup() {
 
   setupWifi();
   setupMQTT();
+  setupOTA();
   setupSaecoCoffeeMachine();
 }
 
@@ -99,6 +104,8 @@ void loop() {
   if (!_mqttClient.connected()){
     connectMQTT();
   }
+  ArduinoOTA.handle();
+  
 }
  /**************************************************************************
  * Local Functions Definitions
@@ -123,8 +130,25 @@ static void onSmallCoffeeBtnPress(uint32_t dur)
 {
   String topic = _coffeeMachineOnBtnPressTopic;
   topic += _onBtnPressSuffixTopic;
+  topic += "/smallCoffee";
   
   Serial.print("small coffed button pressed during "); 
+  Serial.print(dur);
+  Serial.println("ms");
+
+  if (!_mqttClient.publish(topic.c_str(), String(dur).c_str())) {
+    Serial.print("Publish failed on topic ");
+    Serial.println(_coffeeMachineOnBtnPressTopic.c_str());
+  }
+}
+
+static void onPowerBtnPress(uint32_t dur)
+{
+  String topic = _coffeeMachineOnBtnPressTopic;
+  topic += _onBtnPressSuffixTopic;
+  topic += "/powerButton";
+  
+  Serial.print("power button pressed during "); 
   Serial.print(dur);
   Serial.println("ms");
 
@@ -174,20 +198,45 @@ static void setupWifi(void)
   _coffeeMachineName += macToStr(mac);
 }
 
+static void setupOTA(void)
+{
+  //Set actions for OTA
+  ArduinoOTA.onStart([]() {
+    Serial.println("Start");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+  ArduinoOTA.begin();
+  Serial.println("OTA initialized");
+  
+}
+
 static void setupSaecoCoffeeMachine()
 {
   TsCoffeeBtnPins coffeePins =
   {
-    ._u8_smallCupBtnPin = 16,
+    ._u8_smallCupBtnPin = 4,
     ._u8_bigCupBtnPin   = NOT_USED_COFFEE_PIN,
     ._u8_teaCupBtnPin= NOT_USED_COFFEE_PIN,
-    ._u8_powerBtnPin = 5,
+    ._u8_powerBtnPin = 16,
     ._u8_coffeeBrewBtnPin= NOT_USED_COFFEE_PIN,
     ._u8_hiddenBtnPin= NOT_USED_COFFEE_PIN,
-    ._u8_onSmallCupBtnPin= 4,
+    ._u8_onSmallCupBtnPin= NOT_USED_COFFEE_PIN,
     ._u8_onBigCupBtnPin= NOT_USED_COFFEE_PIN,
     ._u8_onTeaCupBtnPin= NOT_USED_COFFEE_PIN,
-    ._u8_onPowerBtnPin= NOT_USED_COFFEE_PIN,
+    ._u8_onPowerBtnPin= 5,
     ._u8_onCoffeeBrewBtnPin= NOT_USED_COFFEE_PIN,
     ._u8_onHiddenBtnPin= NOT_USED_COFFEE_PIN,
   };
@@ -197,7 +246,7 @@ static void setupSaecoCoffeeMachine()
     ._pf_onSmallCupBtnPress = &onSmallCoffeeBtnPress,
     ._pf_onBigCupBtnPress = NULL,
     ._pf_onTeaCupBtnPress= NULL,
-    ._pf_onPowerBtnPress= NULL,
+    ._pf_onPowerBtnPress= &onPowerBtnPress,
     ._pf_onCoffeeBrewBtnPress= NULL,
     ._pf_onHiddenBtnPress = NULL,
   };
