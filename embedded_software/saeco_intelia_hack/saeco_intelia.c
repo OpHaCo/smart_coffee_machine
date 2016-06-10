@@ -46,18 +46,18 @@
   "TEA_CUP",
   "POWER",
   "COFFEE_BREW",
-  "HIDDEN"
+  "CLEAN"
 };
 
 typedef enum 
 {
   /** button hacks - simulate buttons */
-  SMALL_CUP_BTN = 0,
+  SMALL_CUP_BTN =0,
   BIG_CUP_BTN,
   TEA_CUP_BTN,
   POWER_BTN,
   COFFEE_BREW_BTN,
-  HIDDEN_BTN,
+  CLEAN_BTN,
   
   /** button hacks - get button state */
   ON_SMALL_CUP_BTN,
@@ -65,7 +65,7 @@ typedef enum
   ON_TEA_CUP_BTN,
   ON_POWER_BTN,
   ON_COFFEE_BREW_BTN,
-  ON_HIDDEN_BTN,
+  ON_CLEAN_BTN,
 }ECoffeeButtonsId;
 
 typedef void (*TfonButtonStateChanged)(void);
@@ -100,7 +100,7 @@ typedef void (*TfonButtonStateChanged)(void);
 /** IT */
  static void onCoffeeBrewBtnChanged(void);
 /** IT */
- static void onHiddenBtnChanged(void);
+ static void onCleanBtnChanged(void);
 
 /** IT */
  static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId);
@@ -125,13 +125,13 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
   _au8_coffeePins[TEA_CUP_BTN]          = arg_ps_buttonPins->_u8_teaCupBtnPin;
   _au8_coffeePins[POWER_BTN]            = arg_ps_buttonPins->_u8_powerBtnPin;
   _au8_coffeePins[COFFEE_BREW_BTN]      = arg_ps_buttonPins->_u8_coffeeBrewBtnPin;
-  _au8_coffeePins[HIDDEN_BTN]           = arg_ps_buttonPins->_u8_hiddenBtnPin;
+  _au8_coffeePins[CLEAN_BTN]           = arg_ps_buttonPins->_u8_cleanBtnPin;
   _au8_coffeePins[ON_SMALL_CUP_BTN]     = arg_ps_buttonPins->_u8_onSmallCupBtnPin;
   _au8_coffeePins[ON_BIG_CUP_BTN]       = arg_ps_buttonPins->_u8_onBigCupBtnPin;
   _au8_coffeePins[ON_TEA_CUP_BTN]       = arg_ps_buttonPins->_u8_onTeaCupBtnPin;
   _au8_coffeePins[ON_POWER_BTN]         = arg_ps_buttonPins->_u8_onPowerBtnPin;
   _au8_coffeePins[ON_COFFEE_BREW_BTN]   = arg_ps_buttonPins->_u8_onCoffeeBrewBtnPin;
-  _au8_coffeePins[ON_HIDDEN_BTN]        = arg_ps_buttonPins->_u8_onHiddenBtnPin;
+  _au8_coffeePins[ON_CLEAN_BTN]        = arg_ps_buttonPins->_u8_onCleanBtnPin;
   
   if(arg_ps_buttonPressCbs)
   {
@@ -140,7 +140,7 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
     _apf_buttonPressCbs[TEA_CUP_BTN]      = arg_ps_buttonPressCbs->_pf_onTeaCupBtnPress;
     _apf_buttonPressCbs[POWER_BTN]        = arg_ps_buttonPressCbs->_pf_onPowerBtnPress;
     _apf_buttonPressCbs[COFFEE_BREW_BTN]  = arg_ps_buttonPressCbs->_pf_onCoffeeBrewBtnPress;
-    _apf_buttonPressCbs[HIDDEN_BTN]       = arg_ps_buttonPressCbs->_pf_onHiddenBtnPress;
+    _apf_buttonPressCbs[CLEAN_BTN]       = arg_ps_buttonPressCbs->_pf_onCleanBtnPress;
   }
   
   /** set local cb in IT functions */
@@ -149,7 +149,7 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
   _apf_onButtonStateChangedCbs[TEA_CUP_BTN]      = &onTeaCupBtnChanged;
   _apf_onButtonStateChangedCbs[POWER_BTN]        = &onPowerBtnChanged;
   _apf_onButtonStateChangedCbs[COFFEE_BREW_BTN]  = &onCoffeeBrewBtnChanged;
-  _apf_onButtonStateChangedCbs[HIDDEN_BTN]       = &onHiddenBtnChanged;
+  _apf_onButtonStateChangedCbs[CLEAN_BTN]       = &onCleanBtnChanged;
 
   /** configure buttons used to emulate user button press */
   for(loc_u8_index = 0; loc_u8_index < NB_COFFEE_BUTTONS; loc_u8_index++)
@@ -161,7 +161,6 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
     else
     {
       pinMode(_au8_coffeePins[loc_u8_index], OUTPUT);
-      digitalWrite(_au8_coffeePins[loc_u8_index], LOW);
     }
   }
   
@@ -199,7 +198,26 @@ void saecoIntelia_smallCup(void)
  saecoIntelia_emulShortPress(SMALL_CUP_BTN);
 }
 
-void saecoIntelia_bigCup(void){}
+void saecoIntelia_bigCup(void)
+{
+ saecoIntelia_emulShortPress(BIG_CUP_BTN);
+}
+
+void saecoIntelia_teaCup(void)
+{
+ saecoIntelia_emulShortPress(TEA_CUP_BTN);
+}
+
+void saecoIntelia_clean(void)
+{
+ saecoIntelia_emulShortPress(CLEAN_BTN);
+}
+
+void saecoIntelia_brew(void)
+{
+ saecoIntelia_emulShortPress(COFFEE_BREW_BTN);
+}
+
 
 void saecoIntelia_update(void)
 {
@@ -216,7 +234,6 @@ void saecoIntelia_update(void)
         _apf_buttonPressCbs[loc_u8_buttonIndex](_a_li_pressDur[loc_u8_buttonIndex]);
         /** reset flag */
         _u32_buttPress &= ~(1<<loc_u8_buttonIndex);
-        _a_li_pressDur[loc_u8_buttonIndex] = 0;
       }
     }
   }
@@ -274,25 +291,21 @@ static void onCoffeeBrewBtnChanged(void)
 }
 
 /** IT */
-static void onHiddenBtnChanged(void)
+static void onCleanBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(HIDDEN_BTN);
+  onBtnChanged(CLEAN_BTN);
 }
 
 /** IT */
 static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
-{   
-  if(_u32_buttPress  & (1 << arg_e_buttonId))
-  {
-    /** Error : button press flag has not been handled on application side - reject new press/release */
-    return;
-  }
-  
+{ 
   /** button debounced on hw side */
   if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
   {
-    if(_a_li_pressDur[arg_e_buttonId] == 0)
+    if(_a_li_pressDur[arg_e_buttonId] == 0 
+      || _a_li_pressDur[arg_e_buttonId] == millis() //check rebound on push and release
+      || (_u32_buttPress >> arg_e_buttonId) & 0x1)
     {
       /** Error : button release but did not get button press */
       return;

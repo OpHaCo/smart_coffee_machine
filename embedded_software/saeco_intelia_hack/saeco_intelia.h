@@ -46,14 +46,14 @@ typedef struct {
   uint8_t _u8_teaCupBtnPin;
   uint8_t _u8_powerBtnPin;
   uint8_t _u8_coffeeBrewBtnPin;
-  uint8_t _u8_hiddenBtnPin;
+  uint8_t _u8_cleanBtnPin;
   /** button hacks - get button state */
   uint8_t _u8_onSmallCupBtnPin;
   uint8_t _u8_onBigCupBtnPin;
   uint8_t _u8_onTeaCupBtnPin;
   uint8_t _u8_onPowerBtnPin;
   uint8_t _u8_onCoffeeBrewBtnPin;
-  uint8_t _u8_onHiddenBtnPin;
+  uint8_t _u8_onCleanBtnPin;
 }TsCoffeeBtnPins;
 
 typedef void(*TfOnButtonPress)(uint32_t arg_u32_pressDurationMs);
@@ -65,7 +65,7 @@ typedef struct {
   TfOnButtonPress _pf_onTeaCupBtnPress;
   TfOnButtonPress _pf_onPowerBtnPress;
   TfOnButtonPress _pf_onCoffeeBrewBtnPress;
-  TfOnButtonPress _pf_onHiddenBtnPress;
+  TfOnButtonPress _pf_onCleanBtnPress;
 }TsButtonPressCb;
 
 /**************************************************************************
@@ -88,6 +88,9 @@ extern bool saecoIntelia_isPowered(void);
 extern void saecoIntelia_smallCup(void); 
 
 extern void saecoIntelia_bigCup(void); 
+extern void saecoIntelia_teaCup(void); 
+extern void saecoIntelia_clean(void); 
+extern void saecoIntelia_brew(void); 
 
 /** must be called in order to handle button presses cb */
 extern void saecoIntelia_update(void);
