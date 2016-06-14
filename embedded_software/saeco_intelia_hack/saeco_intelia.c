@@ -330,11 +330,8 @@ static void saecoIntelia_onCleanBtnChanged(void)
  *  - after a time t a rising edge is detected 
  * This time t is button press duration.
  * 
- * Buttons are debounced on hardware side (refer oscilloscope captures) but for some buttons (e.g. brew)
- * a software handling must be done to identify button press. 
- * Moreover, GPIO value is checked to reject noise.
- * 
- * @details [long description]
+ * Buttons are debounced on coffee machine hardware side with RC filter. But for some buttons (e.g. brew, small cup)
+ * a software handling must be done to identify button press (refer to oscilloscope captures in hardware/scope_capture). 
  * 
  * @param arg_e_buttonId [description]
  */
