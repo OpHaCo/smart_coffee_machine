@@ -31,7 +31,10 @@
  * Macros
  **************************************************************************/
 #define NB_COFFEE_BUTTONS    7U
- 
+/** below this limit, a button press is rejected */
+#define MIN_PRESS_DUR_MS     10U
+/** Number of consecutive value of GPIO val to consider it ok */
+#define  MIN_GPIO_VAL_NB     20U
 /**************************************************************************
  * Manifest Constants
  **************************************************************************/
@@ -88,30 +91,33 @@ typedef void (*TfonButtonStateChanged)(void);
  static volatile uint32_t _u32_buttPress = 0;
 
 /**************************************************************************
+ * Global Functions Declarations
+ **************************************************************************/
+ extern void __attachInterrupt(uint8_t pin, void(*handler)(void), int mode);
+ 
+/**************************************************************************
  * Local Functions Declarations
  **************************************************************************/
  static void saecoIntelia_emulShortPress(ECoffeeButtonsId arg_e_buttonId);
 
 /** IT */
- static void onSmallCupBtnChanged(void);
+ static void saecoIntelia_onSmallCupBtnChanged(void);
 /** IT */
- static void onBigCupBtnChanged(void);
+ static void saecoIntelia_onBigCupBtnChanged(void);
 /** IT */
- static void onTeaCupBtnChanged(void);
+ static void saecoIntelia_onTeaCupBtnChanged(void);
 /** IT */
- static void onPowerBtnChanged(void);
+ static void saecoIntelia_onPowerBtnChanged(void);
 /** IT */
- static void onCoffeeBrewBtnChanged(void);
+ static void saecoIntelia_onCoffeeBrewBtnChanged(void);
 /** IT */
- static void onHiddenBtnChanged(void);
+ static void saecoIntelia_onHiddenBtnChanged(void);
 /** IT */
- static void onCleanBtnChanged(void);
+ static void saecoIntelia_onCleanBtnChanged(void);
+/** IT */
+ static void saecoIntelia_onBtnStateChanged(ECoffeeButtonsId arg_e_buttonId);
 
-/** IT */
- static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId);
-
-
- extern void __attachInterrupt(uint8_t pin, void(*handler)(void), int mode);
+ static bool saecoIntelia_checkButtonState(ECoffeeButtonsId arg_e_buttonId);
 
 /**************************************************************************
  * Global Functions Defintions
@@ -152,13 +158,13 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
   }
   
   /** set local cb in IT functions */
-  _apf_onButtonStateChangedCbs[SMALL_CUP_BTN]    = &onSmallCupBtnChanged;
-  _apf_onButtonStateChangedCbs[BIG_CUP_BTN]      = &onBigCupBtnChanged;
-  _apf_onButtonStateChangedCbs[TEA_CUP_BTN]      = &onTeaCupBtnChanged;
-  _apf_onButtonStateChangedCbs[POWER_BTN]        = &onPowerBtnChanged;
-  _apf_onButtonStateChangedCbs[COFFEE_BREW_BTN]  = &onCoffeeBrewBtnChanged;
-  _apf_onButtonStateChangedCbs[HIDDEN_BTN]       = &onHiddenBtnChanged;
-  _apf_onButtonStateChangedCbs[CLEAN_BTN]        = &onCleanBtnChanged;
+  _apf_onButtonStateChangedCbs[SMALL_CUP_BTN]    = &saecoIntelia_onSmallCupBtnChanged;
+  _apf_onButtonStateChangedCbs[BIG_CUP_BTN]      = &saecoIntelia_onBigCupBtnChanged;
+  _apf_onButtonStateChangedCbs[TEA_CUP_BTN]      = &saecoIntelia_onTeaCupBtnChanged;
+  _apf_onButtonStateChangedCbs[POWER_BTN]        = &saecoIntelia_onPowerBtnChanged;
+  _apf_onButtonStateChangedCbs[COFFEE_BREW_BTN]  = &saecoIntelia_onCoffeeBrewBtnChanged;
+  _apf_onButtonStateChangedCbs[HIDDEN_BTN]       = &saecoIntelia_onHiddenBtnChanged;
+  _apf_onButtonStateChangedCbs[CLEAN_BTN]        = &saecoIntelia_onCleanBtnChanged;
 
   /** configure buttons used to emulate user button press */
   for(loc_u8_index = 0; loc_u8_index < NB_COFFEE_BUTTONS; loc_u8_index++)
@@ -187,7 +193,7 @@ void saecoIntelia_init(TsCoffeeBtnPins* arg_ps_buttonPins, TsButtonPressCb* arg_
       pinMode(_au8_coffeePins[loc_u8_index + NB_COFFEE_BUTTONS], INPUT);
       attachInterrupt(_au8_coffeePins[loc_u8_index + NB_COFFEE_BUTTONS], 
                       _apf_onButtonStateChangedCbs[loc_u8_index],
-                      CHANGE);
+                      FALLING);
     }
     else
     {
@@ -267,56 +273,72 @@ void saecoIntelia_update(void)
 }
 
 /** IT */
-static void onSmallCupBtnChanged(void)
+static void saecoIntelia_onSmallCupBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(SMALL_CUP_BTN);
+  saecoIntelia_onBtnStateChanged(SMALL_CUP_BTN);
 }
 
 /** IT */
-static void onBigCupBtnChanged(void)
+static void saecoIntelia_onBigCupBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(BIG_CUP_BTN);
+  saecoIntelia_onBtnStateChanged(BIG_CUP_BTN);
 }
 
 /** IT */
-static void onTeaCupBtnChanged(void)
+static void saecoIntelia_onTeaCupBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(TEA_CUP_BTN);
+  saecoIntelia_onBtnStateChanged(TEA_CUP_BTN);
 }
 
 /** IT */
-static void onPowerBtnChanged(void)
+static void saecoIntelia_onPowerBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(POWER_BTN);
+  saecoIntelia_onBtnStateChanged(POWER_BTN);
 }
 
 /** IT */
-static void onCoffeeBrewBtnChanged(void)
+static void saecoIntelia_onCoffeeBrewBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(COFFEE_BREW_BTN);
+  saecoIntelia_onBtnStateChanged(COFFEE_BREW_BTN);
 }
 
 /** IT */
-static void onHiddenBtnChanged(void)
+static void saecoIntelia_onHiddenBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(HIDDEN_BTN);
+  saecoIntelia_onBtnStateChanged(HIDDEN_BTN);
 }
 
 /** IT */
-static void onCleanBtnChanged(void)
+static void saecoIntelia_onCleanBtnChanged(void)
 {
   /** button debounced on hw */
-  onBtnChanged(CLEAN_BTN);
+  saecoIntelia_onBtnStateChanged(CLEAN_BTN);
 }
 
 /** IT */
-static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
+
+/**
+ * @brief Get interrupt from buttons. All buttons are pulled up by Saeco intelia motherboard.
+ * Consequently, a button press is detected when :
+ *  - a falling edge is detected
+ *  - after a time t a rising edge is detected 
+ * This time t is button press duration.
+ * 
+ * Buttons are debounced on hardware side (refer oscilloscope captures) but for some buttons (e.g. brew)
+ * a software handling must be done to identify button press. 
+ * Moreover, GPIO value is checked to reject noise.
+ * 
+ * @details [long description]
+ * 
+ * @param arg_e_buttonId [description]
+ */
+static void saecoIntelia_onBtnStateChanged(ECoffeeButtonsId arg_e_buttonId)
 {   
   if(_u32_buttPress  & (1 << arg_e_buttonId))
   {
@@ -324,14 +346,29 @@ static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
     return;
   }
   
-  /** button debounced on hw side */
-  if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
+  /** reject it if caused by noise / rebound */
+  if(!saecoIntelia_checkButtonState(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
   {
+    return;
+  }
+  
+  if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]))
+  {    
+    /** button release */
+    
     if(_a_li_pressDur[arg_e_buttonId] == 0)
     {
       /** Error : button release but did not get button press */
       return;
     }
+    
+    if(millis() - _a_li_pressDur[arg_e_buttonId] < MIN_PRESS_DUR_MS)
+    {
+      /** not a rebound - refer oscilloscope captures (e.g. on brew)
+      In all cases, do not handle this rising edge - wait next rising edge */
+      return;
+    }
+    
     
     if(_apf_buttonPressCbs[arg_e_buttonId])
     {
@@ -339,6 +376,15 @@ static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
       in a non interrupted context */
       _u32_buttPress |= 1 << arg_e_buttonId;
       _a_li_pressDur[arg_e_buttonId] = millis() - _a_li_pressDur[arg_e_buttonId];
+      
+      detachInterrupt(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]);
+      attachInterrupt(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS], 
+                      _apf_onButtonStateChangedCbs[arg_e_buttonId],
+                      FALLING);
+    }
+    else
+    {
+      /** nothing to do - no callback registered */
     }
   }
   else
@@ -346,5 +392,22 @@ static void onBtnChanged(ECoffeeButtonsId arg_e_buttonId)
     /** button press */
     /* start press duration meas */
     _a_li_pressDur[arg_e_buttonId] = millis();
+
+    detachInterrupt(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]);
+    attachInterrupt(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS], 
+                      _apf_onButtonStateChangedCbs[arg_e_buttonId],
+                      RISING);
   }
+}
+
+bool saecoIntelia_checkButtonState(ECoffeeButtonsId arg_e_buttonId)
+{
+  bool loc_b_val = digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]);
+  
+  for(uint32_t loc_u32_index = 0 ; loc_u32_index < MIN_GPIO_VAL_NB; loc_u32_index++)
+  {
+    if(digitalRead(_au8_coffeePins[arg_e_buttonId + NB_COFFEE_BUTTONS]) != loc_b_val)
+      return false;
+  }
+  return true;
 }
