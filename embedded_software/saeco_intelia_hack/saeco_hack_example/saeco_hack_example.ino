@@ -202,7 +202,6 @@ static void onCoffeeBtnPress(uint32_t dur)
 static void onPowerBtnPress(uint32_t dur)
 {
   String topic = _coffeeMachineOnBtnPressTopic;
-  topic += _onBtnPressSuffixTopic;
   topic += "/powerButton";
   
   Serial.print("power button pressed during "); 
