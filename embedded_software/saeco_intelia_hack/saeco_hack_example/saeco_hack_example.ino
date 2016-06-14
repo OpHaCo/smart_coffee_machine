@@ -109,7 +109,6 @@ void setup() {
 }
 
 void loop() {
-  /** TODO OK to call it before checking connectin??? */
   _mqttClient.loop();
   saecoIntelia_update();
   
@@ -352,6 +351,10 @@ static void mqttSubscribe(const char* topic)
     Serial.print("Subscribe ko to ");
     Serial.println(topic);
   }
+  /** if mqtt client loop not called when several mqtt api calls are done.
+   * At some point, mqtt client api calls fail
+   * */
+  _mqttClient.loop();
 }
 
 static void connectMQTT(void)
