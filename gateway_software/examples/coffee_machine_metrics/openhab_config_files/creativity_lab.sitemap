@@ -1,0 +1,9 @@
+sitemap demo label="Creativity Lab"
+
+    Frame label="Coffee machine" {
+         Text label="Button states"  {
+                Group item=gCoffeeMachine
+         }
+    }
+
+
