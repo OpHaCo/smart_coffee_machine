@@ -3,7 +3,7 @@
 import sys
 import os.path
 from os import listdir 
-
+import shutil 
 ####################
 # global variables #
 ####################
@@ -126,6 +126,7 @@ def main():
         patternSize += 1
         print("Try to find a unique pattern for a pattern size of " + str(patternSize))
         findPattern()
+    shutil.rmtree("./modified_files_python")
 
 if __name__ == "__main__":
     main()
