@@ -1,30 +1,39 @@
 # Coffee machine Hack
 
 Project has been done in Amiqual4Home Equipex Creativity Lab - https://amiqual4home.inria.fr/
+We worked with ENSIMAG students of "café sourire" project http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes  
 
-<center><img src="http://www.machineacafe.net/wp-content/uploads/2015/09/Saeco-HD8751-11.jpg" width="200"></center>
-<center>To hack : Saeco Intelia Coffee Machine</center>
+<img src="http://www.machineacafe.net/wp-content/uploads/2015/09/Saeco-HD8751-11.jpg" width="200">
+*To hack : Saeco Intelia Coffee Machine*
 
 
 
-## Description
+## **Description**
 **You purchased a Saeco Intelia coffee machine. You are very satisfied with it, but you would like to make your coffee from your bedroom just after you wake up...** 
 
-Some other products can do it for you : http://smarter.am/coffee/ . But with Smarter coffee machine you will have to change Coffee filter each time you get a coffee. With an "automatic" coffee machine such as Intelia, coffee grounds are pushed to a compartment : you can do several coffee only by pushing buttons a putting a cup of coffee.
+Some other products can do it for you : http://smarter.am/coffee/ . But with Smarter coffee machine you will have to change Coffee filter each time you get a coffee. With an "automatic" coffee machine such as Intelia, coffee grounds are pushed to a compartment : you can do several coffee only by pushing buttons and putting a cup of coffee.
 
 With this project you will :
  *  **make your automatic coffee machine smarter adding means to control it from anywhere**  e.g. : 
     *  prepare coffee for tomorrow morning at 8AM 
     *  give a vocal command to your smartphone that will make your coffee
-    *  using a camera (refer 'Used in projects' section) to deliver coffee to identified users (refer example of smiling users ;- ) 
+    *  using a camera (refer 'Used in projects' section) to deliver coffee to identified users (refer example of 'café sourire' ) 
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cafe_sourire.jpg" width="300">
+
+*Café Sourire*
+
  * **get coffee machine statistics such as number of coffee per day...**
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/grafana.png" width="600">
+*Coffee metrics*
  
  * **improve some existing parts**
     * add a bigger coffee compartment (TODO)
     * add cup detection (TODO)
     * cup distribution (TODO)
 
-## Prerequisities
+## **Prerequisities**
  * **saeco intelia coffee machine** : https://www.amazon.com/Philips-Saeco-Intelia-Automatic-Espresso/dp/B00B5M3G26
  * some screws to open coffee machine
  * An external board connected to Coffee Machine front side daugther board : 
@@ -35,24 +44,29 @@ With this project you will :
 
  * A linux machine hosting an MQTT broker an hosting needed software for your use case
 
-### Hardware hacking
+### **Hardware hacking**
 On paper front side with its buttons and LCD sceen gives all elements to hack coffee machine :
 
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/saeco_front_side.jpg" width="350"></center>
-<center>Coffee machine front side control panel</center>
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/saeco_front_side.jpg" width="350">
 
-Two things have to be done :
+*Coffee machine front side control panel*
+
+We want to :
  * control machine from external MCU by sending some commands such as "Small Coffee", "Calc Clean"...
  * get coffee machine current status
 
 
-#### First analysis
+#### **First analysis**
 From daughterboard PCB :
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_daughter_board_annoted.jpg" width="500"></center>
-<center>Coffee machine front side control components</center>
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_daughter_board_annoted.jpg" width="500">
+
+*Coffee machine front side control components*
+
 
 Behind display, no MCU :
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_daughter_board_zoom.jpg" width="500"></center>
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_daughter_board_zoom.jpg" width="500">
 
 **We can see** :
  * NO MCU!
@@ -62,8 +76,9 @@ Behind display, no MCU :
  * 18 lines display connector
  * a ChipOnGlass display - no info, datasheet can be found with COG references, except this thread : http://www.forum-raspberrypi.de/Thread-unbekanntes-display-identifizieren  
 
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cog_display_ref.jpg" width="200"></center>
-<center>COG screen</center>
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cog_display_ref.jpg" width="200">
+
+*COG screen*
 
 From this first analysis, we can suppose hacking can be done only from front side daughter board :
  * **hacking existing push buttons to control coffee machine** 
@@ -71,9 +86,9 @@ From this first analysis, we can suppose hacking can be done only from front sid
 
 Coffee machine main mother board (on rear side) won't been hacked. 
 
-#### Buttons hack
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_buttons.png" width="500"></center>
-<center>Front panel buttons identification.</center>
+#### **Buttons hack**
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/front_panel_buttons.png" width="900">
+*Front panel buttons identification.*
 
 We want to keep coffee machine functional, i.e. :
 **coffee machine can be both controlled from buttons and remotely using and external MCU**
@@ -84,7 +99,12 @@ In order to achieve this, a simple solution is to use a bipolar transistor in sa
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/button_hack_schematic.png" width="450">
 
-#### Machine status
+We choose a nodemcu as external MCU.  
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/NodeMCU_DEVKIT_1.0.jpg/220px-NodeMCU_DEVKIT_1.0.jpg" width = "200">
+
+**Coffee machine will be controlled from WIFI using MQTT using nodemcu hardware.**
+
+#### **Machine status**
 LCD can be either red, yellow, black or green. These backlight colors are set from 3 wires (Red - White - Green) near display connector. At 16 line cable, two signals control it :
  * at pin 14 : green control ( logical 1 => green)
  * at pin 15 : red control (logical 1 => red)
@@ -93,7 +113,7 @@ Screen yellow when (pin 14, pin16) =( 1, 1)
 Reading on these lines using a digital input can be useful to get coffee machine error status.
 In order to get more info, LCD screen must be analyzed.
 
-#### Chip On Glass hack
+#### **Chip On Glass hack**
 Coffee machine status is displayed on LCD...  If we hack LCD to get displayed content we will get coffee machine status.
 
 No COG datasheet can be found from display references. Reading some other COG datasheet gave some useful info : most of the time it is controlled using SPI / I2C.
@@ -107,10 +127,14 @@ Some capture are in ./hardware/logic_capture/
 
 Some SPI bursts are sent at fixed interval :
 
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/spi_burst.png" width="900"></center>
-<center>SPI burst</center>
-<center><img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/spi_burst_byte.png" width="900"></center>
-<center>SPI byte transmission in a burst</center>
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/spi_burst.png" width="900">
+*SPI burst*
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/spi_burst_byte.png" width="900">
+*SPI byte transmission in a burst*
+
+From this we can get more info about daughter / mother board 16 lines connector : 
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/daughter_board_connector.png" width="400">
 
 **How to identify a coffee machine status from some SPI bytes?**
 
@@ -120,19 +144,19 @@ An intuitive solution is to find some unique patterns in SPI bytes when coffee m
  * it must be configured as an SPI slave and read incoming bytes
  * incoming bytes are computed to identify some given patterns
 
- * on arduino uno : SPI slave in not supported using Arduino delivered libraries. But Nick Gammon release an SPI library supporting SPI slave http://www.gammon.com.au/forum/?id=10892 
-Find some simple patterns from SPI slave bytes can be done... but it is too slow. A simple test is to echo a rising edge/falling edge when a byte is received. It is done by manipulating directly GPIO register e.g.:
+ * on arduino uno : SPI slave is not supported using Arduino delivered libraries. Fortunately, Nick Gammon releases an SPI library supporting SPI slave on Atmega328p http://www.gammon.com.au/forum/?id=10892 
+Finding some simple patterns from SPI slave bytes can be done... but it is too slow. A simple test is to echo a rising edge/falling edge when a byte is received. It is done by manipulating directly GPIO register e.g.:
     
         // set pin 4 to HIGH
         PORTD |= 1 << 4;
         // set pin 4 to LOW
         PORTD &= ~(1 << 4);
 
-such a simple echo takes 5.4µs between two consecutive edges. We won't be able to identify precisely some pattern from SPI bytes. Too many data are lost.    
+such a simple echo takes 5.4µs between two consecutive edges, it must be compared with a byte transmisssion time @2.5MHz = 8x1/2.5M = 3.2µs. We won't be able to compute precisely some pattern from SPI bytes. Too many data are lost during IT handling.    
  * on an ESP8266 : SPI slave conflicts with flash memory, HSPI must be used http://bbs.espressif.com/viewtopic.php?t=77 . Not tested.
- * on Teensy 3.1/3.2, SPI slave library is included in Arduino Core. After testing, it is possible to compute SPI bytes to identify predefined patterns.
+ * on Teensy 3.1/3.2, SPI slave library is included in Arduino Core. After testing, it is possible to compute SPI bytes to identify predefined patterns. **We will use this board to detect coffee machine status** 
 
-##### Pattern identification
+##### **Pattern identification**
 In order to find unique patterns in SPI data for a given LCD displayed status :
  * some logic captures are done for each LCD displayed status using Salae logic analyzer
  * these captures ared decoded using SPI analyser and exported to CSV, some captures are available under : 
@@ -159,17 +183,29 @@ It can be confirmed using :
 
         pcregrep -c -M  '15\n.*15\n' ./hardware/logic_capture/SPI_decoded/*.txt
 
-### software 
-Add library description
+#### **PCB design**
+Design files are under : 
 
-## Setup
+    ./hardware/pcb_design/
 
-### hardware 
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/PCB_nodemcu.png" width="300">
 
-## Commands
+### **software**
+Library to add is located under :
+
+    ./embedded_software/saeco_intelia_hack/
+
+Under : 
+
+    ./embedded_software/saeco_intelia_hack/saeco_hack_example/saeco_hack_example.ino
+
+You will find an example where coffee machine is controlled remotely using MQTT protocol (refer "Commands" section"). Button presses published to MQTT (refer Events section).
+Firmware uploader Over The Air  
+
+#### **Commands**
 Coffee machine controlled using MQTT protocol. 
 
-### MQTT topics 
+##### **MQTT topics** 
 Here are MQTT topics for example given in : 
 
     ./embedded_software/saeco_intelia_hack/saeco_hack_example/    
@@ -190,7 +226,7 @@ Example :
 
     mosquitto_pub -h MQTT_BROKER_IP -t /amiqual4home/machine_place/saeco-intelia/on_button_press/smallCoffee -m 1
 
-## Events
+#### **Events**
 Buttons press events are send threw MQTT. Here are events MQTT topic for example given in :
 
     ./embedded_software/saeco_intelia_hack/saeco_hack_example/   
@@ -209,21 +245,37 @@ Example to subscribe all button press events :
 
         mosquitto_sub -v -h MQTT_BROKER_IP -p 1883 -t /#
 
-## Existing applications using this project
+## **Used in projects**
+ * café sourire : http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cafe_sourire.jpg" width="300">
+*Café Sourire*
+
  * refer gateway_software/examples
- * coffee_machine_metrics : get coffee machine usage (TODO add picture)
+ * coffee_machine_metrics : get coffee machine usage 
+ 
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/grafana.png" width="900">
+*Coffee metrics*
 
-## References
+ 
+## **References**
 http://www.gammon.com.au/forum/?id=10892
+https://www.saleae.com
+http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes
 
-## TODO
-galère avec SPI
-Description du hacking
-Ajouter capture arduino et SPI
-Add grafana capture
-Detection et mise en place tasse
-Detection debordement eau
-Hack mecanique : plus grands compartiments
+## **TODO**
+* Ajouter capture arduino UNO et SPI
+*Detection et mise en place tasse
+*Detection debordement eau
+*Hack mecanique : plus grands compartiments
 
-## Thanks to
-Fablab group
+## **Thanks to**
+ENSIMAG "café sourire" students http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_per    sonnes_souriantes
+
+## **License**
+ smart_coffee_machine (c) by Lahorde mr.lahorde@laposte.net
+ smart_coffee_machine is licensed under a
+ Creative Commons Attribution-NonCommercial 3.0 Unported License.
+
+ You should have received a copy of the license along with this
+ work.  If not, see <http://creativecommons.org/licenses/by-nc/3.0/>.
