@@ -1,7 +1,7 @@
 # Coffee machine Hack
 
 Project has been done in Amiqual4Home Equipex Creativity Lab - https://amiqual4home.inria.fr/
-We worked with ENSIMAG students of "café sourire" project http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes  
+We worked with ENSIMAG students of ["café sourire project"](http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes)  
 
 <img src="http://www.machineacafe.net/wp-content/uploads/2015/09/Saeco-HD8751-11.jpg" width="200">
 *To hack : Saeco Intelia Coffee Machine*
@@ -74,7 +74,7 @@ Behind display, no MCU :
  * 7 push buttons (PB1 to PB7) pulled up to 5V, debounced using an RC filter, (C25...) 
    * these buttons are either connected to a line of 16 line ribbon cable (PB5, , PB4, PB6) or both combined (threw resistor network) and connected to 16 line ribbon cable (PB1/PB2, PB3/PB7)
  * 18 lines display connector
- * a ChipOnGlass display - no info, datasheet can be found with COG references, except this thread : http://www.forum-raspberrypi.de/Thread-unbekanntes-display-identifizieren  
+ * a ChipOnGlass display - no info, datasheet can be found with COG references, except [this thread](http://www.forum-raspberrypi.de/Thread-unbekanntes-display-identifizieren)  
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cog_display_ref.jpg" width="200">
 
@@ -144,7 +144,7 @@ An intuitive solution is to find some unique patterns in SPI bytes when coffee m
  * it must be configured as an SPI slave and read incoming bytes
  * incoming bytes are computed to identify some given patterns
 
- * on arduino uno : SPI slave is not supported using Arduino delivered libraries. Fortunately, Nick Gammon releases an SPI library supporting SPI slave on Atmega328p http://www.gammon.com.au/forum/?id=10892 
+ * on arduino uno : SPI slave is not supported using Arduino delivered libraries. Fortunately, Nick Gammon releases an SPI library supporting [SPI slave on Atmega328p](http://www.gammon.com.au/forum/?id=10892) 
 Finding some simple patterns from SPI slave bytes can be done... but it is too slow. A simple test is to echo a rising edge/falling edge when a byte is received. It is done by manipulating directly GPIO register e.g.:
     
         // set pin 4 to HIGH
@@ -246,7 +246,7 @@ Example to subscribe all button press events :
         mosquitto_sub -v -h MQTT_BROKER_IP -p 1883 -t /#
 
 ## **Used in projects**
- * café sourire : http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes
+ * [café sourire](http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes)
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/cafe_sourire.jpg" width="300">
 *Café Sourire*
