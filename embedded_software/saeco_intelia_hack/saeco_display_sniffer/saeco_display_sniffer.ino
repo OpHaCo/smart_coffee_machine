@@ -1,9 +1,9 @@
 /******************************************************************************
- * @file    teensy_display_sniffer.ino
+ * @file    saeco_display_sniffer.ino
  * @author  Rémi Pincent - INRIA
- * @date    26 févr. 2014
+ * @date    10/07/2016 
  *
- * @brief Get Saeco Intelia status sniffing Chip On Glass SPI data lines. 
+ * @brief Snif Chip On Glass SPI data lines.
  * 
  * @details Saeco intelia has a COG display but I could not find any datasheet
  * neither doc (refer README.md). After sniffing 16 lines flex connector I 
@@ -39,10 +39,7 @@
 /**************************************************************************
  * Type Definitions
  **************************************************************************/
-typedef enum{
-  OFF = 0,
-  CALC_CLEAN,
-}ECoffeeMachineStatuses;
+
 /**************************************************************************
  * Global Variables
  **************************************************************************/
@@ -51,7 +48,7 @@ typedef enum{
  * Macros
  **************************************************************************/
 //The number of integers per data packet
-#define dataLength  500U
+#define dataLength  2000U
 
 /**************************************************************************
  * Static Variables
@@ -61,14 +58,8 @@ static T3SPI SPI_SLAVE;
 
 //Initialize the arrays for incoming data
 static volatile uint8_t data[dataLength] = {0};
-//bit field of statuses - bit position got from ECoffeeMachineStatuses
-static volatile uint32_t detectedStatuses = 0;
 
-static volatile bool seq1 = false;
-static volatile bool seq2 = false;
-
-static uint8_t offSeq[] = {15, 7, 7};
-static uint8_t calcCleanSeq[] = {63, 63, 63, 255};
+static volatile bool full = false;
 
 /**************************************************************************
  * Local Functions Declarations
@@ -84,7 +75,7 @@ static uint8_t calcCleanSeq[] = {63, 63, 63, 255};
 void setup(){
   
   Serial.begin(115200);
-
+  
   // default PINS 
   SPI_SLAVE.begin_SLAVE(SCK, MOSI, MISO, CS0);
   
@@ -94,45 +85,33 @@ void setup(){
   //Enable the SPI0 Interrupt
   NVIC_ENABLE_IRQ(IRQ_SPI0);
 
-  Serial.println("Start COG SPI sniffer");
+  Serial.println("Start Saeco SPI sniffer");
 }
 
 void loop(){  
-  if(detectedStatuses)
+  if(full)
   {
-    if(detectedStatuses & (1 << OFF))
+    Serial.println("new buffer");
+    for(int i = 0; i < dataLength; i++)
     {
-      Serial.println("OFF");
-      detectedStatuses &= ~(1 << OFF);
+      Serial.println(data[i]);
     }
-    if(detectedStatuses & (1 << CALC_CLEAN))
-    {
-      Serial.println("CALC_CLEAN");
-      detectedStatuses &= ~(1 << CALC_CLEAN);
-    }
+    SPI_SLAVE.dataPointer = 0;
+    full = false;
   }
-}
-
-bool detectSeq(uint8_t* seq, uint8_t length)
-{
-  int currIndex = 0;
-  for(int i = 0; i < length ; i++)
-  {
-    if((SPI_SLAVE.dataPointer - 1) < (i + length - 1))
-      currIndex = dataLength - (SPI_SLAVE.dataPointer - 1) - (i + length - 1);
-    else
-      currIndex = (SPI_SLAVE.dataPointer - 1) - (i + length - 1);
-        
-    if(seq[i] != data[currIndex])
-      return false;
-  }
-  return true;
 }
 
 //Interrupt Service Routine to handle incoming data
 void spi0_isr(void)
 {
-  SPI_SLAVE.rx8 (data, dataLength);
-  detectedStatuses |= detectSeq(offSeq, sizeof(offSeq))             << OFF;  
-  detectedStatuses |= detectSeq(calcCleanSeq, sizeof(calcCleanSeq)) << CALC_CLEAN;   
+  if(SPI_SLAVE.dataPointer == dataLength-1)
+  {
+    full = true;
+    uint8_t trash = SPI0_POPR;
+    SPI0_SR |= SPI_SR_RFDF;
+  }
+  else
+  {
+    SPI_SLAVE.rx8 (data, dataLength);
+  }
 }

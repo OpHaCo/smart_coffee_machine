@@ -183,6 +183,43 @@ It can be confirmed using :
 
         pcregrep -c -M  '15\n.*15\n' ./hardware/logic_capture/SPI_decoded/*.txt
 
+In some cases pattern identification using Salae logig files gives unique pattern results that are not detected on Teensy case. For these special cases, I suggest sniffing SPI with Teensy and applying get_pattern.py to traces. Here is an example that shows this issue :
+I want to get middle coffee unique pattern :
+
+     
+    ./hardware/logic_capture/tools/get_pattern.py ./SPI_decoded/medium_coffee.txt ./SPI_decoded/*.txt 4
+    Try to find a unique pattern for a pattern size of 4
+    new pattern [0 0 128 96 ] is unique - nb occurences = 17
+    new pattern [24 12 228 52 ] is unique - nb occurences = 40
+    new pattern [3 0 0 240 ] is unique - nb occurences = 58
+
+Adding :
+
+    {MEDIUM_COFFEE,   {.pattern32 = PATTERN_32(240, 0, 0, 3)}, UINT32, "MEDIUM_COFFEE"}
+
+to patterns table in :
+
+    ./embedded_software/saeco_intelia_hack/saeco_status/saeco_status.ino
+
+do not give any results. In this case, direct SPI sniffing using teensy is needed. You have to flash :
+
+    ./embedded_software/saeco_intelia_hack/saeco_display_sniffer/saeco_display_sniffer
+
+then sniff SPI in medium coffee state, save UART stream to  and then apply :
+
+    ./hardware/logic_capture/tools/get_pattern.py ./SPI_decoded_teensy/medium_coffee.txt ./SPI_decoded_teensy/*.txt 8
+    Try to find a unique pattern for a pattern size of 8
+    new pattern [224 248 248 240 192 0 15 24 ] is unique - nb occurences = 230
+
+and then add:
+
+    {MEDIUM_COFFEE,   {.pattern64 = PATTERN_64(14, 56, 48, 24, 15, 0, 192, 240)}, UINT64, "MEDIUM_COFFEE"} 
+
+to patterns table in :
+
+    ./embedded_software/saeco_intelia_hack/saeco_status/saeco_status.ino
+
+
 #### **PCB design**
 Design files are under : 
 
@@ -202,6 +239,17 @@ Under :
 You will find an example where coffee machine is controlled remotely using MQTT protocol (refer "Commands" section"). Button presses published to MQTT (refer Events section).
 Firmware uploader Over The Air  
 
+Under :
+
+    ./embedded_software/saeco_intelia_hack/saeco_status/saeco_status.ino
+
+You will find Teensy 3.x code to get Saeco Intelia current status (from LCD lines).
+
+Under :
+
+    ./embedded_software/saeco_intelia_hack/saeco_display_sniffer/saeco_display_sniffer.ino
+
+You will find Teens 3.x code that sniffs SPI lines and display captured buffer.
 #### **Commands**
 Coffee machine controlled using MQTT protocol. 
 
