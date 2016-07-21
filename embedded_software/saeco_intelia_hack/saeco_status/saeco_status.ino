@@ -31,6 +31,7 @@
  * Include Files
  **************************************************************************/
 #include <t3spi.h>
+#include <saeco_status.h>
 
 /**************************************************************************
  * Manifest Constants
@@ -40,30 +41,23 @@
  * Type Definitions
  **************************************************************************/
 typedef enum{
-  OFF = 0,
-  CALC_CLEAN,
-  NO_WATER,
-  WATER_HEATING,
-  WEAK_COFFEE,
-  MEDIUM_COFFEE,
-  STRONG_COFFEE,
-  SPOON_COFFEE,
-  DOOR_OPEN,
-  COFFEE_GROUND_OPEN,
-  MEDIUM_COFFEE_ON_GOING,
-  NO_COFFEE_RED,
-  NO_COFFEE_YELLOW,
-  OUT_OF_ENUM_STATUS
-}ECoffeeMachineStatuses;
-
-typedef enum{
   UINT32,
   UINT64,
   ARRAY
 }EPatternType;
 
+ typedef enum {
+    OK_STATUS = 0,  // Green backlight
+    WARNING, // Yellow backlight
+    ERROR,    // Red backlight
+    POWER_OFF,// No backlight
+    UNKNOWN, 
+    OUT_OF_ENUM_STATUS_TYPE
+ }ELCDBacklightStatus;
+  
 typedef struct{
-  const ECoffeeMachineStatuses status;
+  const ESaecoStatus lcdStatus;
+  const ELCDBacklightStatus lcdStatusType;
   const union{
     uint32_t pattern32;
     uint64_t pattern64;
@@ -71,7 +65,8 @@ typedef struct{
   }pattern;
   const EPatternType patternType;
   const char* name;
-}TsPattern;
+}TsLCDSPIPattern;
+
 /**************************************************************************
  * Global Variables
  **************************************************************************/
@@ -80,7 +75,7 @@ typedef struct{
  * Macros
  **************************************************************************/
 //The number of integers per data packet
-#define dataLength  200U
+#define SPI_BUFF_SIZE  200U
 
 #define PATTERN_32(byte0, byte1, byte2, byte3)\
         (uint32_t)(byte0 | byte1 << 8 | byte2 << 16 | byte3 << 24) 
@@ -88,6 +83,14 @@ typedef struct{
 #define PATTERN_64(byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7)\
         (uint64_t)(PATTERN_32(byte0, byte1, byte2, byte3) \
                 | (uint64_t)PATTERN_32(byte4, byte5, byte6, byte7) << 32 )
+
+#define GREEN_BL_PIN 23U
+#define RED_BL_PIN   22U
+
+#define FRAME_START_BYTES (uint16_t) 0x00FF
+
+/** when no state change - current state sent at this interval */
+#define SEND_INTERVAL 2000
 /**************************************************************************
  * Static Variables
  **************************************************************************/
@@ -95,41 +98,32 @@ typedef struct{
 static T3SPI SPI_SLAVE;
 
 //Initialize the arrays for incoming data
-static volatile uint8_t data[dataLength] = {0};
-//bit field of statuses - bit position got from ECoffeeMachineStatuses
-static volatile uint32_t detectedStatuses = 0;
+static volatile uint8_t _spiData[SPI_BUFF_SIZE] = {0};
+//bit field of statuses - bit position got from ELCDStatuses
+static volatile uint32_t _detectedStatuses = 0;
 
-static volatile uint8_t buffInit = 0;
-static volatile uint64_t spiDataBuff = 0;
+static volatile uint8_t _buffInit = 0;
+static volatile uint64_t _spiPatternDataBuff = 0;
 
-TsPattern patterns[] = {
-  /** First block : 32 bits patterns */
-  {OFF,             {.pattern32 = PATTERN_32(128, 128,   128,   0)}, UINT32, "OFF"},
-  {NO_WATER,        {.pattern32 = PATTERN_32(224, 240, 252, 254)}, UINT32, "NO_WATER"},
-  {WATER_HEATING,   {.pattern32 = PATTERN_32(2  ,   2,   2,   2)}, UINT32, "WATER_HEATING"},
-  {WEAK_COFFEE,     {.pattern32 = PATTERN_32(192,   0,  15, 120)}, UINT32, "WEAK_COFFEE"},
-  {STRONG_COFFEE,   {.pattern32 = PATTERN_32(31,   15,  0,  192)}, UINT32, "STRONG_COFFEE"},
-  {SPOON_COFFEE,    {.pattern32 = PATTERN_32( 3,    3,  3,    3)}, UINT32, "SPOON_COFFEE"},
-  {DOOR_OPEN,       {.pattern32 = PATTERN_32(240,  248, 124,   62)}, UINT32, "DOOR_OPEN"},
-  {COFFEE_GROUND_OPEN,       {.pattern32 = PATTERN_32(224,  224, 224,   224)}, UINT32, "COFFEE_GROUND_OPEN"},
-  {NO_COFFEE_RED,       {.pattern32 = PATTERN_32(255,  248, 224,   192)}, UINT32, "NO_COFFEE_RED"},
-  {NO_COFFEE_YELLOW,       {.pattern32 = PATTERN_32(248,  248, 224,   192)}, UINT32, "NO_COFFEE_YELLOW"},
+TsLCDSPIPattern _patterns[] = {
+  /** First block : 32 bits _patterns */
+  {OFF,                POWER_OFF , {.pattern32 = PATTERN_32(128, 128,   128,   0)}, UINT32, "OFF"},
+  {NO_WATER,           ERROR     , {.pattern32 = PATTERN_32(224, 240, 252, 254)}, UINT32, "NO_WATER"},
+  {WATER_CHANGE,       WARNING   , {.pattern32 = PATTERN_32(2  ,   2,   2,   2)}, UINT32, "WATER_CHANGE"},
+  {WEAK_COFFEE,        UNKNOWN   , {.pattern32 = PATTERN_32(192,   0,  15, 120)}, UINT32, "WEAK_COFFEE"},
+  {STRONG_COFFEE,      UNKNOWN   , {.pattern32 = PATTERN_32(31,   15,  0,  192)}, UINT32, "STRONG_COFFEE"},
+  {SPOON_COFFEE,       OK_STATUS , {.pattern32 = PATTERN_32( 3,    3,  3,    3)}, UINT32, "SPOON_COFFEE"},
+  {DOOR_OPEN,          ERROR     , {.pattern32 = PATTERN_32(240,  248, 124,   62)}, UINT32, "DOOR_OPEN"},
+  {COFFEE_GROUND_OPEN, ERROR     , {.pattern32 = PATTERN_32(248,  248, 248,   0)}, UINT32, "COFFEE_GROUND_OPEN"},
 
-  /** Second block : 64 bits patterns */
-  {MEDIUM_COFFEE,   {.pattern64 = PATTERN_64(14, 56, 48, 24, 15, 0, 192, 240)}, UINT64, "MEDIUM_COFFEE"},
-
-  /** Third block : array patterns */
+  /** Second block : 64 bits _patterns */
+  {MEDIUM_COFFEE,      UNKNOWN  , {.pattern64 = PATTERN_64(14, 56, 48, 24, 15, 0, 192, 240)}, UINT64, "MEDIUM_COFFEE"}
+  /** Third block : array _patterns */
 };
 
-static uint8_t offSeq[] = {15, 7, 7};
-static uint32_t offPattern = PATTERN_32(128, 128, 0, 0);
-static uint32_t noWaterPattern = PATTERN_32(252, 254, 255, 127);
-static uint32_t waterHeatingPattern = PATTERN_32(2, 2, 2, 2);
- 
-static uint8_t calcCleanSeq[] = {63, 63, 63, 255};
-static uint32_t calcCleanPattern = PATTERN_32(63, 63, 63, 255);
-
-static ECoffeeMachineStatuses currentStatus = OUT_OF_ENUM_STATUS;
+static TsLCDSPIPattern* _p_currentPattern = NULL;
+static ELCDBacklightStatus _currentStatusType = OUT_OF_ENUM_STATUS_TYPE;
+static unsigned long _lastSendTime = 0;
 
 /**************************************************************************
  * Local Functions Declarations
@@ -145,6 +139,10 @@ static ECoffeeMachineStatuses currentStatus = OUT_OF_ENUM_STATUS;
 void setup(){
   
   Serial.begin(115200);
+  Serial1.begin(115200);
+
+  pinMode(GREEN_BL_PIN, INPUT_PULLUP);
+  pinMode(RED_BL_PIN, INPUT_PULLUP);
   
   // default PINS 
   SPI_SLAVE.begin_SLAVE(SCK, MOSI, MISO, CS0);
@@ -159,56 +157,162 @@ void setup(){
 }
 
 void loop(){  
-  if(detectedStatuses)
+  ELCDBacklightStatus newStatusType = getStatusType();
+  ESaecoStatus newStatus = OUT_OF_ENUM_SAECO_STATUS;
+  
+  if(_detectedStatuses)
   {
-    for(int i = 0; i < sizeof(patterns) / sizeof(TsPattern); i++)
+    for(int i = 0; i < sizeof(_patterns) / sizeof(TsLCDSPIPattern); i++)
     {
-      if(detectedStatuses & (1 << patterns[i].status))
+      if(_detectedStatuses & (1 << _patterns[i].lcdStatus))
       {
-        if(currentStatus != patterns[i].status)
+        if(_p_currentPattern != &_patterns[i])
         {
-          Serial.println(patterns[i].name);
-          currentStatus = patterns[i].status;
+          newStatus = _patterns[i].lcdStatus;
+          Serial.println(_patterns[i].name);
+          Serial.flush();
+          _p_currentPattern = &_patterns[i];    
         }
-        detectedStatuses &= ~(1 << patterns[i].status);
+
+        /** clear status that has been set in interrupted context */
+        _detectedStatuses &= ~(1 << _patterns[i].lcdStatus);
       }
     }
   }
+
+  if(_p_currentPattern != NULL && 
+      ((newStatusType != OUT_OF_ENUM_STATUS_TYPE && _currentStatusType != newStatusType)
+       || (newStatus != OUT_OF_ENUM_SAECO_STATUS && newStatus != _p_currentPattern->lcdStatus)
+       || (millis() - _lastSendTime > SEND_INTERVAL)))
+  {
+    _currentStatusType = newStatusType;
+    ESaecoStatus saecoStatus = computeStatus();
+
+    if(saecoStatus != OUT_OF_ENUM_SAECO_STATUS)
+      sendStatus(saecoStatus);
+    else
+      Serial.println("Error - invalid status "); 
+  }
+}
+
+/**
+ * Compute status from actual status and status type
+ */
+ESaecoStatus computeStatus(void)
+{
+  ESaecoStatus ret = OUT_OF_ENUM_SAECO_STATUS;
+
+  if(_currentStatusType == POWER_OFF)
+  {
+    ret = OFF;
+  }
+  else if(_p_currentPattern->lcdStatusType == UNKNOWN)
+  {
+    if(_p_currentPattern->lcdStatus == WEAK_COFFEE
+      || _p_currentPattern->lcdStatus == MEDIUM_COFFEE
+      || _p_currentPattern->lcdStatus == STRONG_COFFEE)
+    {
+      if(_currentStatusType == WARNING)
+        ret = NO_COFFEE_WARNING;
+      else if(_currentStatusType == ERROR)
+        ret = NO_COFFEE_ERROR;
+      else if(_currentStatusType == OK_STATUS)
+        ret = _p_currentPattern->lcdStatus;
+    }
+  }
+  else if(_p_currentPattern->lcdStatusType != _currentStatusType)
+  {
+    /** error in status */
+    if(_currentStatusType == OK_STATUS) ret = UNKNWOWN_OK;
+    else if(_currentStatusType == WARNING) ret = UNKNWOWN_WARNING;
+    else if(_currentStatusType == ERROR) ret = UNKNWOWN_ERROR;
+  }
+  else
+  {
+    ret = _p_currentPattern->lcdStatus;
+  }
+  return ret;
+}
+
+void sendStatus(ESaecoStatus arg_machineStatus)
+{  
+  /** Frame sent is 3 bytes length 
+   *  Byte    0                          1                            2                     
+   *         FRAME_START_BYTE MSByte     FRAME_START_BYTE LSByte      machine status         
+   */
+   uint8_t frame[] = {
+    (FRAME_START_BYTES >> 8 ) & 0xFF, 
+    FRAME_START_BYTES         & 0xFF, 
+    arg_machineStatus         & 0xFF
+    };
+  
+  Serial1.write(frame, sizeof(frame)); 
+  Serial1.flush();
+  _lastSendTime = millis();
+
+  Serial.print("sent status : ");
+  Serial.print(arg_machineStatus);
+  Serial.print(" at ");
+  Serial.print((long) _lastSendTime);
+  Serial.println("ms");
+}
+
+ELCDBacklightStatus getStatusType(void)
+{
+  bool isRed = digitalRead(RED_BL_PIN);
+  bool isGreen = digitalRead(GREEN_BL_PIN);
+  ELCDBacklightStatus ret ;
+  
+  /** when off some spike occur on green wire (even
+   *  when configuring input as pull up)
+   *  filter it.
+   */
+  delay(1);
+  if(digitalRead(GREEN_BL_PIN) != isGreen || digitalRead(RED_BL_PIN) != isRed)
+    return OUT_OF_ENUM_STATUS_TYPE;
+  
+  if(isRed && isGreen)
+    ret = WARNING;
+  else if(isRed && !isGreen)
+    ret = ERROR;
+  else if(!isRed && isGreen)
+    ret = OK_STATUS;
+  else 
+    ret = POWER_OFF;
+  return ret;
 }
 
 //Interrupt Service Routine to handle incoming data
 void spi0_isr(void)
 {
-  SPI_SLAVE.rx8 (data, dataLength);
-  spiDataBuff = spiDataBuff << 8 | data[SPI_SLAVE.dataPointer - 1];
+  SPI_SLAVE.rx8 (_spiData, SPI_BUFF_SIZE);
+  _spiPatternDataBuff = _spiPatternDataBuff << 8 | _spiData[SPI_SLAVE.dataPointer - 1];
   
-  if(buffInit < sizeof(spiDataBuff))
+  if(_buffInit < sizeof(_spiPatternDataBuff))
   {
-    buffInit++;
+    _buffInit++;
   }
   else
   {
-    if(spiDataBuff == 0)
+    if(_spiPatternDataBuff == 0)
       return;
       
-    uint32_t buff32 = spiDataBuff >> 32;
+    uint32_t buff32 = _spiPatternDataBuff >> 32;
 
-    for(int i = 0; i < sizeof(patterns) / sizeof(TsPattern); i++)
+    for(int i = 0; i < sizeof(_patterns) / sizeof(TsLCDSPIPattern); i++)
     {
-      if(patterns[i].patternType == UINT64)
+      if(_patterns[i].patternType == UINT64)
       {
-        if(spiDataBuff == patterns[i].pattern.pattern64)
+        if(_spiPatternDataBuff == _patterns[i].pattern.pattern64)
         {
-          detectedStatuses |= 1 << patterns[i].status;
-          return;
+          _detectedStatuses |= 1 << _patterns[i].lcdStatus;
         }
       }
-      else if(patterns[i].patternType == UINT32)
-      {
-        if(buff32 == patterns[i].pattern.pattern32)
+      else if(_patterns[i].patternType == UINT32 && buff32 != 0)
+      {        
+        if(buff32 == _patterns[i].pattern.pattern32)
         {
-          detectedStatuses |= 1 << patterns[i].status;
-          return;
+          _detectedStatuses |= 1 << _patterns[i].lcdStatus;
         }
       }
     }

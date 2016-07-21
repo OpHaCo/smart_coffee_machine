@@ -31,10 +31,22 @@
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include "saeco_intelia.h"
+#include <saeco_intelia.h>
+#include <saeco_status.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <Adafruit_NeoPixel.h>
+
+/**************************************************************************
+ * Macros
+ **************************************************************************/
+/** Connect a teensy daugther boad thru UART
+ *  to get precise coffee machine statuses 
+ */
+#define ENABLE_STATUS
+
+/** Status frame start bytes */
+#define FRAME_START_BYTES (uint16_t) 0x00FF
 
 /**************************************************************************
  * Manifest Constants
@@ -66,6 +78,7 @@ static void setupMQTTTopics(void);
 static void setupMQTTSubs(void);
 static void mqttSubscribe(const char* topic);
 static void setupMQTTConnection(void);
+static void getCoffeeMachineStatus(void);
 
 /**************************************************************************
  * Static Variables
@@ -73,7 +86,6 @@ static void setupMQTTConnection(void);
 /** filled lated with mac address */
 static String _coffeeMachineName = "saeco_intelia";
 static String _coffeeMachineTopicPrefix = "/amiqual4home/machine_place/";
-static String _onBtnPressSuffixTopic = "_on_btn_press";
 static String _coffeeMachinePowerTopic;
 static String _coffeeMachineSmallCupTopic;
 static String _coffeeMachineBigCupTopic;
@@ -81,15 +93,14 @@ static String _coffeeMachineTeaCupTopic;
 static String _coffeeMachineCleanTopic;
 static String _coffeeMachineBrewTopic;
 static String _coffeeMachineOnBtnPressTopic;
+static String _coffeeMachineAliveTopic;
 static String _coffeeMachineStatusTopic;
 
 static Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, A0, NEO_GRB + NEO_KHZ400);
 static WiFiClient _wifiClient;
 static PubSubClient _mqttClient(_mqttServer, 1883, onMQTTMsgReceived, _wifiClient);
 
-/**************************************************************************
- * Macros
- **************************************************************************/
+static ESaecoStatus     _machineStatus     = OUT_OF_ENUM_SAECO_STATUS;
 
 /**************************************************************************
  * Global Functions Defintions
@@ -110,6 +121,7 @@ void setup() {
 
 void loop() {
   _mqttClient.loop();
+  getCoffeeMachineStatus();
   saecoIntelia_update();
   
   if (!_mqttClient.connected()){
@@ -328,6 +340,7 @@ static void setupMQTTTopics(void)
   _coffeeMachineBrewTopic = _coffeeMachineTopicPrefix + '/' + "brew";
   _coffeeMachineStatusTopic= _coffeeMachineTopicPrefix + '/' + "status";
   _coffeeMachineOnBtnPressTopic= _coffeeMachineTopicPrefix + '/' + "on_button_press";
+  _coffeeMachineAliveTopic= _coffeeMachineTopicPrefix + '/' + "alive";
 }
 
 static void setupMQTTSubs(void)
@@ -370,8 +383,8 @@ static void connectMQTT(void)
       setupMQTTSubs();
       Serial.println("Connected to MQTT broker");
       Serial.print("send alive message to topic ");
-      Serial.println(_coffeeMachineStatusTopic.c_str());
-      if (!_mqttClient.publish(_coffeeMachineStatusTopic.c_str(), "alive")) {
+      Serial.println(_coffeeMachineAliveTopic.c_str());
+      if (!_mqttClient.publish(_coffeeMachineAliveTopic.c_str(), "alive")) {
         Serial.println("Publish failed");
       }
       return;
@@ -384,7 +397,38 @@ static void connectMQTT(void)
   }
 }
 
+static void getCoffeeMachineStatus(void)
+{
+  ESaecoStatus newMachineStatus;
+  
+  if( Serial.available() == 0 )
+    return;
 
+  if(Serial.read() != ((FRAME_START_BYTES >> 8) & 0xFF))
+    return;
+
+  while(Serial.available() == 0);
+ 
+  if(Serial.read() != FRAME_START_BYTES  & 0xFF)
+    return;
+  
+  while(Serial.available() == 0);
+  newMachineStatus = (ESaecoStatus) Serial.read();
+ 
+  if(newMachineStatus != _machineStatus)
+  {
+    _machineStatus = newMachineStatus;
+;
+    Serial.println("frame received");
+    Serial.print("status = ");
+    Serial.print(_machineStatus);
+
+    if (!_mqttClient.publish(_coffeeMachineStatusTopic.c_str(), String(_machineStatus).c_str())) {
+      Serial.print("Publish failed on topic ");
+      Serial.println(_coffeeMachineStatusTopic.c_str());
+    }
+  }
+}
 
 
 
