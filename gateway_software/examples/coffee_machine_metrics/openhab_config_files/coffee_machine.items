@@ -9,3 +9,5 @@ Number  CoffeeMachineCoffeeButtonPress             "Coffee button press [%s]"   
 Number  CoffeeMachinePowerButtonPress              "Power button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/powerButton:state:default]" }
 
 Number  CoffeeMachineBrewButtonPress               "Brew button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/brew:state:default]" }
+
+Number  CoffeeMachineStatus               "Saeco status [MAP(saeco_status.map):%s]"        (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/status:state:default]" }

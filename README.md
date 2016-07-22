@@ -227,6 +227,10 @@ Design files are under :
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/PCB_nodemcu.png" width="300">
 
+### **general architecture**
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/general_architecture.png" width="900">
+
 ### **software**
 Library to add is located under :
 
@@ -258,40 +262,75 @@ Here are MQTT topics for example given in :
 
     ./embedded_software/saeco_intelia_hack/saeco_hack_example/    
 
-- **"/amiqual4home/machine_place/small_cup"** : sending any byte to this value will simulate a short press on smallCoffee button
+- **"/amiqual4home/machine_place/saeco_intelia/smallCoffee"** : sending any byte to this value will simulate a short press on smallCoffee button
 
-- **"/amiqual4home/machine_place/big_cup"**   : sending any byte to this value will simulate a short press on coffee button
+- **"/amiqual4home/machine_place/saeco_intelia/Coffee"**   : sending any byte to this value will simulate a short press on coffee button
 
-- **"/amiqual4home/machine_place/power"**     : sending any byte to this value will simulate a short press on power button
+- **"/amiqual4home/machine_place/saeco_intelia/power"**     : sending any byte to this value will simulate a short press on power button
 
-- **"/amiqual4home/machine_place/brew"**      : sending any byte to this value will simulate a short press on brew button
+- **"/amiqual4home/machine_place/saeco_intelia/brew"**      : sending any byte to this value will simulate a short press on brew button
 
-- **"/amiqual4home/machine_place/tea"**       : sending any byte to this value will simulate a short press on tea button
+- **"/amiqual4home/machine_place/saeco_intelia/tea"**       : sending any byte to this value will simulate a short press on tea button
 
-- **"/amiqual4home/machine_place/clean"**     : sending any byte to this value will simulate a short press on clean button
+- **"/amiqual4home/machine_place/saeco_intelia/clean"**     : sending any byte to this value will simulate a short press on clean button
 
-Example :
+Get a small coffee over MQTT :
 
-    mosquitto_pub -h MQTT_BROKER_IP -t /amiqual4home/machine_place/saeco-intelia/on_button_press/smallCoffee -m 1
+    mosquitto_pub -h MQTT_BROKER_IP -t /amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee -m 1
 
 #### **Events**
+
+##### Button press events
 Buttons press events are send threw MQTT. Here are events MQTT topic for example given in :
 
     ./embedded_software/saeco_intelia_hack/saeco_hack_example/   
 
 Button press topics messages payload contains press duration in ms. 
 
-- **"/amiqual4home/machine_place/_on_button_press/powerButton"**        : power button pressed
+- **"/amiqual4home/machine_place/saeco_intelia/on_button_press/powerButton"**        : power button pressed
  
-- **"/amiqual4home/machine_place/_on_button_press/Coffee"**             : coffee button pressed
+- **"/amiqual4home/machine_place/saeco_intelia/on_button_press/Coffee"**             : coffee button pressed
  
-- **"/amiqual4home/machine_place/_on_button_press/smallCoffee"**        : small coffee button pressed
+- **"/amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee"**        : small coffee button pressed
  
-- **"/amiqual4home/machine_place/_on_button_press/brew"**               : brew coffee button pressed
+- **"/amiqual4home/machine_place/saeco_intelia/on_button_press/brew"**               : brew coffee button pressed
  
 Example to subscribe all button press events :
 
-        mosquitto_sub -v -h MQTT_BROKER_IP -p 1883 -t /#
+        mosquitto_sub -v -h MQTT_BROKER_IP -p 1883 -t /amiqual4home/machine_place/saeco_intelia/on_button_press/#
+
+##### Coffee machine status event
+Saeco coffee machine status sent on this topic :
+
+ - **"/amiqual4home/machine_place/saeco_intelia/status**
+
+    OFF                     = 0,
+    CALC_CLEAN              = 1,
+    NO_WATER                = 2,
+    WATER_CHANGE            = 3,
+    WEAK_COFFEE             = 4,
+    MEDIUM_COFFEE           = 5,
+    STRONG_COFFEE           = 6,
+    SPOON_COFFEE            = 7,
+    DOOR_OPEN               = 8,
+    COFFEE_GROUND_OPEN      = 9,
+    NO_COFFEE_WARNING       = 10,
+    NO_COFFEE_ERROR         = 11,
+    UNKNOWN_OK              = 12,
+    UNKNOWN_WARNING         = 13,
+    UNKNOWN_ERROR           = 14,
+    COFFEE_GROUND_FULL      = 15
+
+Here are coffee machine statuses :
+
+When application starts it sends an alive message on topic : 
+
+ - **"/amiqual4home/machine_place/saeco_intelia/alive"**
+
+#### Openhab
+[Openhab](http://www.openhab.org/) is used to interface with coffee machine. From a web interface you can control machine and get current status.
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/openhab.png" width="900">
 
 ## **Used in projects**
  * [café sourire](http://fablab.ensimag.fr/index.php/Machine_%C3%A0_caf%C3%A9_%22sourire%22_:_Machine_connect%C3%A9_qui_offre_des_caf%C3%A9s_aux_personnes_souriantes)
