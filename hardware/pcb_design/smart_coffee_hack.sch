@@ -89,10 +89,6 @@ F 3 "" H 1900 2950 50  0000 C CNN
 	1    1900 2950
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	1400 2950 1400 3050
-Wire Wire Line
-	1900 2950 1900 3050
 $Comp
 L +5V #PWR05
 U 1 1 5764084A
@@ -104,8 +100,6 @@ F 3 "" H 3850 4000 50  0000 C CNN
 	1    3850 4000
 	-1   0    0    1   
 $EndComp
-Wire Wire Line
-	3850 3950 4300 3950
 $Comp
 L GND #PWR06
 U 1 1 5764085D
@@ -117,10 +111,6 @@ F 3 "" H 3850 3850 50  0000 C CNN
 	1    3850 3850
 	0    1    1    0   
 $EndComp
-Wire Wire Line
-	3850 3850 4300 3850
-Wire Wire Line
-	3850 3950 3850 4000
 $Comp
 L GND #PWR07
 U 1 1 5764088B
@@ -180,8 +170,6 @@ F 3 "" H 950 2950 50  0000 C CNN
 	1    950  2950
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	950  3100 950  2950
 $Comp
 L +3.3V #PWR011
 U 1 1 57640A3C
@@ -193,12 +181,6 @@ F 3 "" H 5650 3950 50  0000 C CNN
 	1    5650 3950
 	-1   0    0    1   
 $EndComp
-Wire Wire Line
-	5200 3950 5650 3950
-Wire Wire Line
-	5200 3850 5650 3850
-NoConn ~ 5200 3750
-NoConn ~ 5200 3650
 $Comp
 L +3.3V #PWR012
 U 1 1 57640A80
@@ -232,10 +214,6 @@ F 3 "" H 5550 3150 50  0000 C CNN
 	1    5550 3150
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	5200 3150 5550 3150
-Wire Wire Line
-	3850 3450 4300 3450
 $Comp
 L BC547 Q1
 U 1 1 57640E26
@@ -280,24 +258,6 @@ F 3 "" H 5600 1750 50  0000 C CNN
 	1    5600 1750
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	5300 2150 5300 2050
-Wire Wire Line
-	5200 2550 5300 2550
-Wire Wire Line
-	5300 2550 5300 2450
-Wire Wire Line
-	5500 1750 5600 1750
-Wire Wire Line
-	5100 1750 5100 1350
-Wire Wire Line
-	5100 1350 5800 1350
-Wire Wire Line
-	5800 1350 5800 2150
-Wire Wire Line
-	5200 2650 5800 2650
-Wire Wire Line
-	5800 2650 5800 2450
 $Comp
 L BC547 Q2
 U 1 1 576413A8
@@ -342,16 +302,6 @@ F 3 "" H 6400 1750 50  0000 C CNN
 	1    6400 1750
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	6100 2150 6100 2050
-Wire Wire Line
-	6300 1750 6400 1750
-Wire Wire Line
-	5900 1050 5900 1750
-Wire Wire Line
-	5900 1350 6600 1350
-Wire Wire Line
-	6600 1350 6600 2150
 $Comp
 L BC547 Q3
 U 1 1 576415C1
@@ -396,16 +346,6 @@ F 3 "" H 7200 1750 50  0000 C CNN
 	1    7200 1750
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	6900 2150 6900 2050
-Wire Wire Line
-	7100 1750 7200 1750
-Wire Wire Line
-	6700 600  6700 1750
-Wire Wire Line
-	6700 1350 7400 1350
-Wire Wire Line
-	7400 1350 7400 2150
 $Comp
 L BC547 Q4
 U 1 1 57641682
@@ -450,6 +390,156 @@ F 3 "" H 8000 1750 50  0000 C CNN
 	1    8000 1750
 	0    -1   -1   0   
 $EndComp
+NoConn ~ 5200 3550
+NoConn ~ 4300 3650
+NoConn ~ 4300 3750
+$Comp
+L CONN_COFFEE_MACHINE_02X04 P1
+U 1 1 57643A7E
+P 4000 1000
+F 0 "P1" H 4000 1250 50  0000 C CNN
+F 1 "CONN_COFFEE_MACHINE_02X04" H 4000 750 50  0000 C CNN
+F 2 "w_conn_jst-ph:b8b-ph-kl" H 4000 -200 50  0001 C CNN
+F 3 "" H 4000 -200 50  0000 C CNN
+	1    4000 1000
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR019
+U 1 1 57643AEF
+P 4750 1200
+F 0 "#PWR019" H 4750 950 50  0001 C CNN
+F 1 "GND" H 4750 1050 50  0000 C CNN
+F 2 "" H 4750 1200 50  0000 C CNN
+F 3 "" H 4750 1200 50  0000 C CNN
+	1    4750 1200
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R1
+U 1 1 57643E2A
+P 3950 2550
+F 0 "R1" V 4030 2550 50  0000 C CNN
+F 1 "R" V 3950 2550 50  0000 C CNN
+F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 3880 2550 50  0001 C CNN
+F 3 "" H 3950 2550 50  0000 C CNN
+	1    3950 2550
+	0    1    1    0   
+$EndComp
+$Comp
+L R R2
+U 1 1 57643EBE
+P 3950 2850
+F 0 "R2" V 4030 2850 50  0000 C CNN
+F 1 "R" V 3950 2850 50  0000 C CNN
+F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 3880 2850 50  0001 C CNN
+F 3 "" H 3950 2850 50  0000 C CNN
+	1    3950 2850
+	0    1    1    0   
+$EndComp
+$Comp
+L R R11
+U 1 1 5764439B
+P 5450 2850
+F 0 "R11" V 5530 2850 50  0000 C CNN
+F 1 "R" V 5450 2850 50  0000 C CNN
+F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 5380 2850 50  0001 C CNN
+F 3 "" H 5450 2850 50  0000 C CNN
+	1    5450 2850
+	0    1    1    0   
+$EndComp
+$Comp
+L +5V #PWR020
+U 1 1 57644050
+P 3150 950
+F 0 "#PWR020" H 3150 800 50  0001 C CNN
+F 1 "+5V" H 3150 1090 50  0000 C CNN
+F 2 "" H 3150 950 50  0000 C CNN
+F 3 "" H 3150 950 50  0000 C CNN
+	1    3150 950 
+	0    -1   -1   0   
+$EndComp
+NoConn ~ 4300 3550
+$Comp
+L CONN_01X02 P2
+U 1 1 579211C7
+P 5550 3700
+F 0 "P2" H 5550 3850 50  0000 C CNN
+F 1 "CONN_01X02" V 5650 3700 50  0000 C CNN
+F 2 "w_conn_jst-ph:b2b-ph-kl" H 5550 3700 50  0001 C CNN
+F 3 "" H 5550 3700 50  0000 C CNN
+	1    5550 3700
+	1    0    0    -1  
+$EndComp
+$Comp
+L CONN_01X02 P3
+U 1 1 57921222
+P 7800 3700
+F 0 "P3" H 7800 3850 50  0000 C CNN
+F 1 "CONN_01X02" V 7900 3700 50  0000 C CNN
+F 2 "w_conn_jst-ph:b2b-ph-kl" H 7800 3700 50  0001 C CNN
+F 3 "" H 7800 3700 50  0000 C CNN
+	1    7800 3700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1400 2950 1400 3050
+Wire Wire Line
+	1900 2950 1900 3050
+Wire Wire Line
+	3850 3950 4300 3950
+Wire Wire Line
+	3850 3850 4300 3850
+Wire Wire Line
+	3850 3950 3850 4000
+Wire Wire Line
+	950  3100 950  2950
+Wire Wire Line
+	5200 3950 5650 3950
+Wire Wire Line
+	5200 3850 5650 3850
+Wire Wire Line
+	5200 3150 5550 3150
+Wire Wire Line
+	3850 3450 4300 3450
+Wire Wire Line
+	5300 2150 5300 2050
+Wire Wire Line
+	5200 2550 5300 2550
+Wire Wire Line
+	5300 2550 5300 2450
+Wire Wire Line
+	5500 1750 5600 1750
+Wire Wire Line
+	5100 1750 5100 1350
+Wire Wire Line
+	5100 1350 5800 1350
+Wire Wire Line
+	5800 1350 5800 2150
+Wire Wire Line
+	5200 2650 5800 2650
+Wire Wire Line
+	5800 2650 5800 2450
+Wire Wire Line
+	6100 2150 6100 2050
+Wire Wire Line
+	6300 1750 6400 1750
+Wire Wire Line
+	5900 1050 5900 1750
+Wire Wire Line
+	5900 1350 6600 1350
+Wire Wire Line
+	6600 1350 6600 2150
+Wire Wire Line
+	6900 2150 6900 2050
+Wire Wire Line
+	7100 1750 7200 1750
+Wire Wire Line
+	6700 600  6700 1750
+Wire Wire Line
+	6700 1350 7400 1350
+Wire Wire Line
+	7400 1350 7400 2150
 Wire Wire Line
 	7700 2150 7700 2050
 Wire Wire Line
@@ -478,9 +568,6 @@ Wire Wire Line
 	5200 3450 7700 3450
 Wire Wire Line
 	7700 3450 7700 2450
-NoConn ~ 5200 3550
-NoConn ~ 4300 3650
-NoConn ~ 4300 3750
 Wire Wire Line
 	8200 2450 8200 4300
 Wire Wire Line
@@ -489,28 +576,6 @@ Wire Wire Line
 	3000 4300 3000 2950
 Wire Wire Line
 	3000 2950 4300 2950
-$Comp
-L CONN_COFFEE_MACHINE_02X04 P1
-U 1 1 57643A7E
-P 4000 1000
-F 0 "P1" H 4000 1250 50  0000 C CNN
-F 1 "CONN_COFFEE_MACHINE_02X04" H 4000 750 50  0000 C CNN
-F 2 "Socket_Strips:Socket_Strip_Straight_2x04" H 4000 -200 50  0001 C CNN
-F 3 "" H 4000 -200 50  0000 C CNN
-	1    4000 1000
-	1    0    0    -1  
-$EndComp
-$Comp
-L GND #PWR019
-U 1 1 57643AEF
-P 4750 1200
-F 0 "#PWR019" H 4750 950 50  0001 C CNN
-F 1 "GND" H 4750 1050 50  0000 C CNN
-F 2 "" H 4750 1200 50  0000 C CNN
-F 3 "" H 4750 1200 50  0000 C CNN
-	1    4750 1200
-	1    0    0    -1  
-$EndComp
 Connection ~ 7500 1350
 Connection ~ 6700 1350
 Wire Wire Line
@@ -526,45 +591,12 @@ Wire Wire Line
 	3350 1150 3350 1750
 Wire Wire Line
 	3350 1750 5100 1750
-$Comp
-L R R1
-U 1 1 57643E2A
-P 3950 2550
-F 0 "R1" V 4030 2550 50  0000 C CNN
-F 1 "R" V 3950 2550 50  0000 C CNN
-F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 3880 2550 50  0001 C CNN
-F 3 "" H 3950 2550 50  0000 C CNN
-	1    3950 2550
-	0    1    1    0   
-$EndComp
-$Comp
-L R R2
-U 1 1 57643EBE
-P 3950 2850
-F 0 "R2" V 4030 2850 50  0000 C CNN
-F 1 "R" V 3950 2850 50  0000 C CNN
-F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 3880 2850 50  0001 C CNN
-F 3 "" H 3950 2850 50  0000 C CNN
-	1    3950 2850
-	0    1    1    0   
-$EndComp
 Wire Wire Line
 	4100 2550 4300 2550
 Wire Wire Line
 	4100 2850 4300 2850
 Wire Wire Line
 	5200 3050 5900 3050
-$Comp
-L R R11
-U 1 1 5764439B
-P 5450 2850
-F 0 "R11" V 5530 2850 50  0000 C CNN
-F 1 "R" V 5450 2850 50  0000 C CNN
-F 2 "Resistors_ThroughHole:Resistor_Horizontal_RM10mm" V 5380 2850 50  0001 C CNN
-F 3 "" H 5450 2850 50  0000 C CNN
-	1    5450 2850
-	0    1    1    0   
-$EndComp
 Wire Wire Line
 	5200 2850 5300 2850
 Wire Wire Line
@@ -582,17 +614,6 @@ Wire Wire Line
 	2850 850  3750 850 
 Wire Wire Line
 	3150 950  3750 950 
-$Comp
-L +5V #PWR020
-U 1 1 57644050
-P 3150 950
-F 0 "#PWR020" H 3150 800 50  0001 C CNN
-F 1 "+5V" H 3150 1090 50  0000 C CNN
-F 2 "" H 3150 950 50  0000 C CNN
-F 3 "" H 3150 950 50  0000 C CNN
-	1    3150 950 
-	0    -1   -1   0   
-$EndComp
 Wire Wire Line
 	4450 950  7500 950 
 Wire Wire Line
@@ -610,5 +631,36 @@ Wire Wire Line
 	4900 2050 4900 850 
 Wire Wire Line
 	4900 850  4450 850 
-NoConn ~ 4300 3550
+Wire Wire Line
+	5200 3650 5350 3650
+Wire Wire Line
+	5200 3750 5350 3750
+$Comp
+L GND #PWR022
+U 1 1 57921595
+P 7350 3650
+F 0 "#PWR022" H 7350 3400 50  0001 C CNN
+F 1 "GND" H 7350 3500 50  0000 C CNN
+F 2 "" H 7350 3650 50  0000 C CNN
+F 3 "" H 7350 3650 50  0000 C CNN
+	1    7350 3650
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	7350 3650 7600 3650
+Wire Wire Line
+	7400 3750 7400 3850
+Wire Wire Line
+	7400 3750 7600 3750
+$Comp
+L +5V #PWR?
+U 1 1 579233FE
+P 7400 3850
+F 0 "#PWR?" H 7400 3700 50  0001 C CNN
+F 1 "+5V" H 7400 3990 50  0000 C CNN
+F 2 "" H 7400 3850 50  0000 C CNN
+F 3 "" H 7400 3850 50  0000 C CNN
+	1    7400 3850
+	-1   0    0    1   
+$EndComp
 $EndSCHEMATC
