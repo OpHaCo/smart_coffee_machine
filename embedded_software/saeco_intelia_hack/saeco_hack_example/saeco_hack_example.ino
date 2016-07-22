@@ -86,15 +86,24 @@ static void getCoffeeMachineStatus(void);
 /** filled lated with mac address */
 static String _coffeeMachineName = "saeco_intelia";
 static String _coffeeMachineTopicPrefix = "/amiqual4home/machine_place/";
-static String _coffeeMachinePowerTopic;
-static String _coffeeMachineSmallCupTopic;
-static String _coffeeMachineBigCupTopic;
-static String _coffeeMachineTeaCupTopic;
-static String _coffeeMachineCleanTopic;
-static String _coffeeMachineBrewTopic;
+
 static String _coffeeMachineOnBtnPressTopic;
 static String _coffeeMachineAliveTopic;
 static String _coffeeMachineStatusTopic;
+
+static String _coffeeMachinePowerTopic;
+static String _coffeeMachineSmallCoffeeTopic;
+static String _coffeeMachineCoffeeTopic;
+static String _coffeeMachineTeaTopic;
+static String _coffeeMachineCleanTopic;
+static String _coffeeMachineBrewTopic;
+
+static String _onCoffeeMachinePowerBtnTopic;
+static String _onCoffeeMachineSmallCoffeeBtnTopic;
+static String _onCoffeeMachineCoffeeBtnTopic;
+static String _onCoffeeMachineTeaBtnTopic;
+static String _onCoffeeMachineCleanBtnTopic;
+static String _onCoffeeMachineBrewBtnTopic;
 
 static Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, A0, NEO_GRB + NEO_KHZ400);
 static WiFiClient _wifiClient;
@@ -121,7 +130,11 @@ void setup() {
 
 void loop() {
   _mqttClient.loop();
+
+  #ifdef ENABLE_STATUS
   getCoffeeMachineStatus();
+  #endif
+  
   saecoIntelia_update();
   
   if (!_mqttClient.connected()){
@@ -143,15 +156,15 @@ static void onMQTTMsgReceived(char* topic, byte* payload, unsigned int length) {
   {
     saecoIntelia_power();
   }
-  else if(strcmp(topic, _coffeeMachineSmallCupTopic.c_str()) == 0)
+  else if(strcmp(topic, _coffeeMachineSmallCoffeeTopic.c_str()) == 0)
   {
     saecoIntelia_smallCup();
   }
-  else if(strcmp(topic, _coffeeMachineBigCupTopic.c_str()) == 0)
+  else if(strcmp(topic, _coffeeMachineCoffeeTopic.c_str()) == 0)
   {
     saecoIntelia_bigCup();
   }
-  else if(strcmp(topic, _coffeeMachineTeaCupTopic.c_str()) == 0)
+  else if(strcmp(topic, _coffeeMachineTeaTopic.c_str()) == 0)
   {
     saecoIntelia_teaCup();
   }
@@ -167,61 +180,49 @@ static void onMQTTMsgReceived(char* topic, byte* payload, unsigned int length) {
 
 static void onBrewBtnPress(uint32_t dur)
 {
-  String topic = _coffeeMachineOnBtnPressTopic;
-  topic += "/brew";
-  
   Serial.print("brew button pressed during "); 
   Serial.print(dur);
   Serial.println("ms");
 
-  if (!_mqttClient.publish(topic.c_str(), String(dur).c_str())) {
+  if (!_mqttClient.publish(_onCoffeeMachineBrewBtnTopic.c_str(), String(dur).c_str())) {
     Serial.print("Publish failed on topic ");
-    Serial.println(_coffeeMachineOnBtnPressTopic.c_str());
+    Serial.println(_onCoffeeMachineBrewBtnTopic);
   }
 }
 
 static void onSmallCoffeeBtnPress(uint32_t dur)
-{
-  String topic = _coffeeMachineOnBtnPressTopic;
-  topic += "/smallCoffee";
-  
+{  
   Serial.print("small coffee button pressed during "); 
   Serial.print(dur);
   Serial.println("ms");
 
-  if (!_mqttClient.publish(topic.c_str(), String(dur).c_str())) {
+  if (!_mqttClient.publish(_onCoffeeMachineSmallCoffeeBtnTopic.c_str(), String(dur).c_str())) {
     Serial.print("Publish failed on topic ");
-    Serial.println(_coffeeMachineOnBtnPressTopic.c_str());
+    Serial.println(_onCoffeeMachineSmallCoffeeBtnTopic.c_str());
   }
 }
 
 static void onCoffeeBtnPress(uint32_t dur)
-{
-  String topic = _coffeeMachineOnBtnPressTopic;
-  topic += "/Coffee";
-  
+{  
   Serial.print("coffee button pressed during "); 
   Serial.print(dur);
   Serial.println("ms");
 
-  if (!_mqttClient.publish(topic.c_str(), String(dur).c_str())) {
+  if (!_mqttClient.publish(_onCoffeeMachineCoffeeBtnTopic.c_str(), String(dur).c_str())) {
     Serial.print("Publish failed on topic ");
-    Serial.println(_coffeeMachineOnBtnPressTopic.c_str());
+    Serial.println(_onCoffeeMachineCoffeeBtnTopic.c_str());
   }
 }
 
 static void onPowerBtnPress(uint32_t dur)
-{
-  String topic = _coffeeMachineOnBtnPressTopic;
-  topic += "/powerButton";
-  
+{  
   Serial.print("power button pressed during "); 
   Serial.print(dur);
   Serial.println("ms");
 
-  if (!_mqttClient.publish(topic.c_str(), String(dur).c_str())) {
+  if (!_mqttClient.publish(_onCoffeeMachinePowerBtnTopic.c_str(), String(dur).c_str())) {
     Serial.print("Publish failed on topic ");
-    Serial.println(_coffeeMachineOnBtnPressTopic.c_str());
+    Serial.println(_onCoffeeMachinePowerBtnTopic.c_str());
   }
 }
 
@@ -332,23 +333,31 @@ static void setupMQTTTopics(void)
 {
   _coffeeMachineTopicPrefix += _coffeeMachineName;
 
-  _coffeeMachinePowerTopic = _coffeeMachineTopicPrefix + '/' + "power";
-  _coffeeMachineSmallCupTopic = _coffeeMachineTopicPrefix + '/' + "small_cup";
-  _coffeeMachineBigCupTopic = _coffeeMachineTopicPrefix + '/' + "big_cup";
-  _coffeeMachineTeaCupTopic = _coffeeMachineTopicPrefix + '/' + "tea_cup";
-  _coffeeMachineCleanTopic = _coffeeMachineTopicPrefix + '/' + "clean";
-  _coffeeMachineBrewTopic = _coffeeMachineTopicPrefix + '/' + "brew";
   _coffeeMachineStatusTopic= _coffeeMachineTopicPrefix + '/' + "status";
   _coffeeMachineOnBtnPressTopic= _coffeeMachineTopicPrefix + '/' + "on_button_press";
   _coffeeMachineAliveTopic= _coffeeMachineTopicPrefix + '/' + "alive";
+  
+  _coffeeMachinePowerTopic = _coffeeMachineTopicPrefix + '/' + "power";
+  _coffeeMachineSmallCoffeeTopic = _coffeeMachineTopicPrefix + '/' + "smallCoffee";
+  _coffeeMachineCoffeeTopic = _coffeeMachineTopicPrefix + '/' + "coffee";
+  _coffeeMachineTeaTopic = _coffeeMachineTopicPrefix + '/' + "tea";
+  _coffeeMachineCleanTopic = _coffeeMachineTopicPrefix + '/' + "clean";
+  _coffeeMachineBrewTopic = _coffeeMachineTopicPrefix + '/' + "brew";
+  
+  _onCoffeeMachinePowerBtnTopic = _coffeeMachineOnBtnPressTopic + "power"; 
+  _onCoffeeMachineSmallCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "smallCoffee";
+  _onCoffeeMachineCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "coffee";
+  _onCoffeeMachineTeaBtnTopic = _coffeeMachineOnBtnPressTopic + "tea";
+  _onCoffeeMachineCleanBtnTopic = _coffeeMachineOnBtnPressTopic + "clean";
+  _onCoffeeMachineBrewBtnTopic = _coffeeMachineOnBtnPressTopic + "brew";
 }
 
 static void setupMQTTSubs(void)
 {
   mqttSubscribe(_coffeeMachinePowerTopic.c_str());
-  mqttSubscribe(_coffeeMachineSmallCupTopic.c_str());
-  mqttSubscribe(_coffeeMachineBigCupTopic.c_str());
-  mqttSubscribe(_coffeeMachineTeaCupTopic.c_str());
+  mqttSubscribe(_coffeeMachineSmallCoffeeTopic.c_str());
+  mqttSubscribe(_coffeeMachineCoffeeTopic.c_str());
+  mqttSubscribe(_coffeeMachineTeaTopic.c_str());
   mqttSubscribe(_coffeeMachineCleanTopic.c_str());
   mqttSubscribe(_coffeeMachineBrewTopic.c_str());
 }

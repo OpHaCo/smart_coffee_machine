@@ -90,7 +90,7 @@ typedef struct{
 #define FRAME_START_BYTES (uint16_t) 0x00FF
 
 /** when no state change - current state sent at this interval */
-#define SEND_INTERVAL 2000
+#define SEND_INTERVAL 10000
 /**************************************************************************
  * Static Variables
  **************************************************************************/
@@ -115,6 +115,7 @@ TsLCDSPIPattern _patterns[] = {
   {SPOON_COFFEE,       OK_STATUS , {.pattern32 = PATTERN_32( 3,    3,  3,    3)}, UINT32, "SPOON_COFFEE"},
   {DOOR_OPEN,          ERROR     , {.pattern32 = PATTERN_32(240,  248, 124,   62)}, UINT32, "DOOR_OPEN"},
   {COFFEE_GROUND_OPEN, ERROR     , {.pattern32 = PATTERN_32(248,  248, 248,   0)}, UINT32, "COFFEE_GROUND_OPEN"},
+  {COFFEE_GROUND_FULL, ERROR     , {.pattern32 = PATTERN_32(249,  248, 248,   240)}, UINT32, "COFFEE_GROUND_FULL"},
 
   /** Second block : 64 bits _patterns */
   {MEDIUM_COFFEE,      UNKNOWN  , {.pattern64 = PATTERN_64(14, 56, 48, 24, 15, 0, 192, 240)}, UINT64, "MEDIUM_COFFEE"}
@@ -139,7 +140,7 @@ static unsigned long _lastSendTime = 0;
 void setup(){
   
   Serial.begin(115200);
-  Serial1.begin(115200);
+  //Serial1.begin(115200);
 
   pinMode(GREEN_BL_PIN, INPUT_PULLUP);
   pinMode(RED_BL_PIN, INPUT_PULLUP);
@@ -180,10 +181,9 @@ void loop(){
     }
   }
 
-  if(_p_currentPattern != NULL && 
-      ((newStatusType != OUT_OF_ENUM_STATUS_TYPE && _currentStatusType != newStatusType)
+  if((newStatusType != OUT_OF_ENUM_STATUS_TYPE && _currentStatusType != newStatusType)
        || (newStatus != OUT_OF_ENUM_SAECO_STATUS && newStatus != _p_currentPattern->lcdStatus)
-       || (millis() - _lastSendTime > SEND_INTERVAL)))
+       || (millis() - _lastSendTime > SEND_INTERVAL))
   {
     _currentStatusType = newStatusType;
     ESaecoStatus saecoStatus = computeStatus();
@@ -206,6 +206,13 @@ ESaecoStatus computeStatus(void)
   {
     ret = OFF;
   }
+  else if(_p_currentPattern == NULL)
+  {
+    /** no status captured on SPI */
+    if(_currentStatusType == OK_STATUS) ret = UNKNOWN_OK;
+    else if(_currentStatusType == WARNING) ret = UNKNOWN_WARNING;
+    else if(_currentStatusType == ERROR) ret = UNKNOWN_ERROR;
+  }
   else if(_p_currentPattern->lcdStatusType == UNKNOWN)
   {
     if(_p_currentPattern->lcdStatus == WEAK_COFFEE
@@ -223,9 +230,9 @@ ESaecoStatus computeStatus(void)
   else if(_p_currentPattern->lcdStatusType != _currentStatusType)
   {
     /** error in status */
-    if(_currentStatusType == OK_STATUS) ret = UNKNWOWN_OK;
-    else if(_currentStatusType == WARNING) ret = UNKNWOWN_WARNING;
-    else if(_currentStatusType == ERROR) ret = UNKNWOWN_ERROR;
+    if(_currentStatusType == OK_STATUS) ret = UNKNOWN_OK;
+    else if(_currentStatusType == WARNING) ret = UNKNOWN_WARNING;
+    else if(_currentStatusType == ERROR) ret = UNKNOWN_ERROR;
   }
   else
   {
