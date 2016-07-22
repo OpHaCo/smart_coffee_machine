@@ -304,6 +304,7 @@ Saeco coffee machine status sent on this topic :
 
  - **"/amiqual4home/machine_place/saeco_intelia/status**
 
+
     OFF                     = 0,
     CALC_CLEAN              = 1,
     NO_WATER                = 2,
