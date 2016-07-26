@@ -35,7 +35,6 @@
 #include <saeco_status.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <Adafruit_NeoPixel.h>
 
 /**************************************************************************
  * Macros
@@ -69,7 +68,6 @@ static const char* _mqttServer = "mqtt_server_address";
 static void onMQTTMsgReceived(char* topic, byte* payload, unsigned int length);
 static void onSmallCoffeeBtnPress(uint32_t dur);
 static void onPowerBtnPress(uint32_t dur);
-static String macToStr(const uint8_t* mac);
 static void setupWifi(void);
 static void setupOTA(void);
 static void setupSaecoCoffeeMachine(void);
@@ -105,7 +103,6 @@ static String _onCoffeeMachineTeaBtnTopic;
 static String _onCoffeeMachineCleanBtnTopic;
 static String _onCoffeeMachineBrewBtnTopic;
 
-static Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, A0, NEO_GRB + NEO_KHZ400);
 static WiFiClient _wifiClient;
 static PubSubClient _mqttClient(_mqttServer, 1883, onMQTTMsgReceived, _wifiClient);
 
@@ -115,12 +112,16 @@ static ESaecoStatus     _machineStatus     = OUT_OF_ENUM_SAECO_STATUS;
  * Global Functions Defintions
  **************************************************************************/
 void setup() {
-  strip.begin();
-  strip.setPixelColor(0, 255, 0, 255);
-  strip.show();
   
   Serial.begin(115200);
   delay(10);
+
+  Serial.println("\nstarting saeco_hack_example"); 
+
+  uint8_t* mac[6]; 
+  String macAdd= WiFi.macAddress();                
+  Serial.print("WIFI mac address : ");
+  Serial.println(macAdd);
 
   setupWifi();
   setupMQTT();
@@ -141,7 +142,6 @@ void loop() {
     connectMQTT();
   }
   ArduinoOTA.handle();
-  
 }
  /**************************************************************************
  * Local Functions Definitions
@@ -226,15 +226,28 @@ static void onPowerBtnPress(uint32_t dur)
   }
 }
 
-String macToStr(const uint8_t* mac)
-{
-  String result;
-  for (int i = 0; i < 6; ++i) {
-    result += String(mac[i], 16);
-    if (i < 5)
-      result += ':';
+static void onTeaBtnPress(uint32_t dur)
+{  
+  Serial.print("tea button pressed during "); 
+  Serial.print(dur);
+  Serial.println("ms");
+
+  if (!_mqttClient.publish(_onCoffeeMachineTeaBtnTopic.c_str(), String(dur).c_str())) {
+    Serial.print("Publish failed on topic ");
+    Serial.println(_onCoffeeMachineTeaBtnTopic.c_str());
   }
-  return result;
+}
+
+static void onCleanBtnPress(uint32_t dur)
+{  
+  Serial.print("clean button pressed during "); 
+  Serial.print(dur);
+  Serial.println("ms");
+
+  if (!_mqttClient.publish(_onCoffeeMachineCleanBtnTopic.c_str(), String(dur).c_str())) {
+    Serial.print("Publish failed on topic ");
+    Serial.println(_onCoffeeMachineCleanBtnTopic.c_str());
+  }
 }
 
 static void setupWifi(void)
@@ -294,18 +307,20 @@ static void setupSaecoCoffeeMachine()
   TsCoffeeBtnPins coffeePins =
   {
     ._u8_smallCupBtnPin      = 16,
-    ._u8_bigCupBtnPin        = 14,
+    ._u8_bigCupBtnPin        = 4,
     ._u8_teaCupBtnPin        = NOT_USED_COFFEE_PIN,
-    ._u8_powerBtnPin         = 15,
-    ._u8_coffeeBrewBtnPin    = 10,
+    ._u8_powerBtnPin         = 14,
+    ._u8_coffeeBrewBtnPin    = 13,
     ._u8_hiddenBtnPin        = NOT_USED_COFFEE_PIN,
-    ._u8_cleanBtnPin         = 4,
+    ._u8_cleanBtnPin         = NOT_USED_COFFEE_PIN,
     ._u8_onSmallCupBtnPin    = 5,
-    ._u8_onBigCupBtnPin      = 12,
-    ._u8_onTeaCupBtnPin      = NOT_USED_COFFEE_PIN,
-    ._u8_onPowerBtnPin       = 13,
+    ._u8_onBigCupBtnPin      = 2,
+    ._u8_onTeaCupBtnPin      = 10,
+    ._u8_onPowerBtnPin       = 12,
     ._u8_onCoffeeBrewBtnPin  = 9,
     ._u8_onHiddenBtnPin      = NOT_USED_COFFEE_PIN,
+    /** A0 cannot be configured as digital input */
+    // ._u8_onCleanBtnPin       = A0
     ._u8_onCleanBtnPin       = NOT_USED_COFFEE_PIN
   };
   
@@ -313,11 +328,11 @@ static void setupSaecoCoffeeMachine()
   TsButtonPressCb coffeeBtnPressCb = {
     ._pf_onSmallCupBtnPress    = &onSmallCoffeeBtnPress,
     ._pf_onBigCupBtnPress      = &onCoffeeBtnPress,
-    ._pf_onTeaCupBtnPress      = NULL,
+    ._pf_onTeaCupBtnPress      = &onTeaBtnPress,
     ._pf_onPowerBtnPress       = &onPowerBtnPress,
     ._pf_onCoffeeBrewBtnPress  = &onBrewBtnPress,
     ._pf_onHiddenBtnPress      = NULL,
-    ._pf_onCleanBtnPress       = NULL,
+    ._pf_onCleanBtnPress       = &onCleanBtnPress,
   };
   saecoIntelia_init(&coffeePins, &coffeeBtnPressCb); 
   Serial.println("Saeco coffee machine initialized");
@@ -344,12 +359,12 @@ static void setupMQTTTopics(void)
   _coffeeMachineCleanTopic = _coffeeMachineTopicPrefix + '/' + "clean";
   _coffeeMachineBrewTopic = _coffeeMachineTopicPrefix + '/' + "brew";
   
-  _onCoffeeMachinePowerBtnTopic = _coffeeMachineOnBtnPressTopic + "power"; 
-  _onCoffeeMachineSmallCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "smallCoffee";
-  _onCoffeeMachineCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "coffee";
-  _onCoffeeMachineTeaBtnTopic = _coffeeMachineOnBtnPressTopic + "tea";
-  _onCoffeeMachineCleanBtnTopic = _coffeeMachineOnBtnPressTopic + "clean";
-  _onCoffeeMachineBrewBtnTopic = _coffeeMachineOnBtnPressTopic + "brew";
+  _onCoffeeMachinePowerBtnTopic = _coffeeMachineOnBtnPressTopic + "/power"; 
+  _onCoffeeMachineSmallCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "/smallCoffee";
+  _onCoffeeMachineCoffeeBtnTopic = _coffeeMachineOnBtnPressTopic + "/coffee";
+  _onCoffeeMachineTeaBtnTopic = _coffeeMachineOnBtnPressTopic + "/tea";
+  _onCoffeeMachineCleanBtnTopic = _coffeeMachineOnBtnPressTopic + "/clean";
+  _onCoffeeMachineBrewBtnTopic = _coffeeMachineOnBtnPressTopic + "/brew";
 }
 
 static void setupMQTTSubs(void)
