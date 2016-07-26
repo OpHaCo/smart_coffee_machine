@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 2.8)
+set(CMAKE_PREFIX_PATH ../raspicam/build)
+project( tests )
+find_package( OpenCV REQUIRED )
+find_package( raspicam REQUIRED )
+set(SOURCE client.cpp client.h base64.cpp base64.h smile_rasp.cpp)
+add_executable(smile_detect ${SOURCE})
+target_link_libraries( smile_detect ${OpenCV_LIBS} ${raspicam_CV_LIBS} mosquittopp)
