@@ -13,6 +13,9 @@ We worked with ENSIMAG students of ["café sourire project"](http://fablab.ensim
 
 Some other products can do it for you : http://smarter.am/coffee/ . But with Smarter coffee machine you will have to change Coffee filter each time you get a coffee. With an "automatic" coffee machine such as Intelia, coffee grounds are pushed to a compartment : you can do several coffee only by pushing buttons and putting a cup of coffee.
 
+Best choice for a super automatic & connected coffee machine is Philips Saeco Gran Baristo Avanti. It is connected over bluetooth. Due to bluetooth range limitations, you won't be able to do your coffee from your bedroom. It costs 2500$!!  
+[Fortune and smart coffee maker](http://fortune.com/2015/12/24/smart-coffee-maker/)
+
 With this project you will :
  *  **make your automatic coffee machine smarter adding means to control it from anywhere**  e.g. : 
     *  prepare coffee for tomorrow morning at 8AM 
