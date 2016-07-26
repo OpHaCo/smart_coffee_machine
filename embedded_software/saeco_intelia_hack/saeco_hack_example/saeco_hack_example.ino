@@ -123,6 +123,10 @@ void setup() {
   Serial.print("WIFI mac address : ");
   Serial.println(macAdd);
 
+  #ifdef ENABLE_STATUS
+  Serial.println("Coffee machine status enabled over Rx using Teensy daughterboard");
+  #endif
+
   setupWifi();
   setupMQTT();
   setupOTA();

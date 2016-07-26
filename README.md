@@ -227,6 +227,13 @@ Design files are under :
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/PCB_nodemcu.png" width="300">
 
+#### **PCB integration**
+
+PCB is integrated on coffee machine right side. Here is an integration with hack mother board and hack status board (get status over LCS SPI and LCD backlight leds)
+
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/pcb_integration_0.jpg" width="800">
+<img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/pcb_integration_1.jpg" width="800">
+
 ### **general architecture**
 
 <img src="https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/general_architecture.png" width="900">

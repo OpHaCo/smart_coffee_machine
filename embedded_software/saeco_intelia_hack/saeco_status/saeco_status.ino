@@ -140,7 +140,7 @@ static unsigned long _lastSendTime = 0;
 void setup(){
   
   Serial.begin(115200);
-  //Serial1.begin(115200);
+  Serial1.begin(115200);
 
   pinMode(GREEN_BL_PIN, INPUT_PULLUP);
   pinMode(RED_BL_PIN, INPUT_PULLUP);
