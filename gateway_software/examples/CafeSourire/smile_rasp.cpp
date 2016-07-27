@@ -10,8 +10,11 @@
 #include "opencv/cxcore.h"
 #include "opencv/highgui.h"
 #include "opencv/cvaux.h"
+#include "opencv2/videoio.hpp"
 
+#ifdef USE_RASPICAM
 #include <raspicam/raspicam_cv.h>
+#endif
 
 #include "client.h"
 #include "base64.h"
@@ -103,17 +106,24 @@ int main (int argc, const char * argv[])
     CvMemStorage *storage = cvCreateMemStorage(0);
     CvHaarClassifierCascade *cascade = (CvHaarClassifierCascade*)cvLoad("data/haarcascades_cuda/haarcascade_frontalface_default.xml");
 
+printf("starting cam\n");
+
+#ifdef USE_RASPICAM
     raspicam::RaspiCam_Cv capture;
-    printf("starting cam\n");
-    //forcer N/B sur l'image
-    //capture.set(CV_CAP_PROP_FORMAT,CV_8UC1);
-    capture.set(CV_CAP_PROP_FRAME_WIDTH,WIDTH);
-    capture.set(CV_CAP_PROP_FRAME_HEIGHT,HEIGHT);
-    if(!capture.open())
+    if(!capture.open()) 
+#else
+    VideoCapture capture(0);
+    if(!capture.isOpened())
+#endif 
     {
         printf("No webcam where found");
         return 1;
     }
+     
+    //forcer N/B sur l'image
+    //capture.set(CV_CAP_PROP_FORMAT,CV_8UC1);
+    capture.set(CV_CAP_PROP_FRAME_WIDTH,WIDTH);
+    capture.set(CV_CAP_PROP_FRAME_HEIGHT,HEIGHT);
 
 
     // counters used for frame capture
@@ -127,7 +137,6 @@ int main (int argc, const char * argv[])
     printf("start listening\n");
     while(1)
     {
-
         if(search_smile > time(NULL)) {
             capture.grab();
             capture.retrieve(image_tmp);//,raspicam::RASPICAM_FORMAT_RGB);
@@ -136,6 +145,7 @@ int main (int argc, const char * argv[])
             IplImage *img = &copy;
 
             // read the keyboard
+            printf("waitkey\n");		
             int c = cvWaitKey(50) & 255;
             if(c == 27) break; // quit the program when ESC is pressed
 
