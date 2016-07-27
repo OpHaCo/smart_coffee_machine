@@ -4,9 +4,9 @@ Group gCoffeeMachineButtonsCapture (All)
 
 Number  CoffeeMachineSmallCoffeeButtonPress        "Small cup button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee:state:default]" }
 
-Number  CoffeeMachineCoffeeButtonPress             "Coffee button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/Coffee:state:default]" }
+Number  CoffeeMachineCoffeeButtonPress             "Coffee button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/coffee:state:default]" }
 
-Number  CoffeeMachinePowerButtonPress              "Power button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/powerButton:state:default]" }
+Number  CoffeeMachinePowerButtonPress              "Power button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/power:state:default]" }
 
 Number  CoffeeMachineBrewButtonPress               "Brew button press [%s]"   (gCoffeeMachine, gCoffeeMachineButtonsCapture)                { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/brew:state:default]" }
 
