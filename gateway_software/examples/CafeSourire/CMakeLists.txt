@@ -3,6 +3,7 @@ set(CMAKE_PREFIX_PATH ../raspicam/build)
 project( CafeSourire )
 find_package( OpenCV REQUIRED )
 
+set(CMAKE_BUILD_TYPE Debug)
 set(SOURCE client.cpp client.h base64.cpp base64.h smile_rasp.cpp)
 add_executable(smile_detect ${SOURCE})
 
