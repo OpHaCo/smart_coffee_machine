@@ -4,7 +4,7 @@ project( CafeSourire )
 find_package( OpenCV REQUIRED )
 
 set(CMAKE_BUILD_TYPE Debug)
-set(SOURCE client.cpp client.h base64.cpp base64.h smile_rasp.cpp)
+set(SOURCE client.cpp client.h base64.cpp base64.h smile_detect.cpp)
 add_executable(smile_detect ${SOURCE})
 
 find_path(RPI_TARGET bcm_host.h PATHS /opt/vc/include/ NO_DEFAULT_PATH)
