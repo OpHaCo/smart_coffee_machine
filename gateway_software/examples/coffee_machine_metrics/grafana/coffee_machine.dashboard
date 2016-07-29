@@ -15,74 +15,7 @@
       "height": "250px",
       "panels": [
         {
-          "title": "Small cup - today",
-          "error": false,
-          "span": 2,
-          "editable": true,
-          "type": "singlestat",
-          "isNew": true,
-          "id": 2,
-          "targets": [
-            {
-              "policy": "default",
-              "dsType": "influxdb",
-              "resultFormat": "time_series",
-              "tags": [],
-              "groupBy": [
-                {
-                  "type": "time",
-                  "params": [
-                    "$interval"
-                  ]
-                },
-                {
-                  "type": "fill",
-                  "params": [
-                    "null"
-                  ]
-                }
-              ],
-              "select": [
-                [
-                  {
-                    "type": "field",
-                    "params": [
-                      "value"
-                    ]
-                  },
-                  {
-                    "type": "mean",
-                    "params": []
-                  }
-                ]
-              ],
-              "refId": "A",
-              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where time > now() - 1d",
-              "rawQuery": true
-            }
-          ],
-          "links": [],
-          "datasource": "creativity_lab_openhab",
-          "maxDataPoints": 100,
-          "interval": null,
           "cacheTimeout": null,
-          "format": "none",
-          "prefix": "",
-          "postfix": "",
-          "nullText": null,
-          "valueMaps": [
-            {
-              "value": "null",
-              "op": "=",
-              "text": "N/A"
-            }
-          ],
-          "nullPointMode": "connected",
-          "valueName": "avg",
-          "prefixFontSize": "50%",
-          "valueFontSize": "80%",
-          "postfixFontSize": "50%",
-          "thresholds": "5,15,30",
           "colorBackground": false,
           "colorValue": true,
           "colors": [
@@ -90,21 +23,90 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
+          "datasource": "creativity_lab_openhab",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 50,
+            "minValue": 0,
+            "show": true,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 2,
+          "interval": "now/d",
+          "isNew": true,
+          "links": [],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "span": 2,
           "sparkline": {
-            "show": false,
+            "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
-            "fillColor": "rgba(31, 118, 189, 0.18)"
+            "show": false
           },
-          "gauge": {
-            "show": true,
-            "minValue": 0,
-            "maxValue": 50,
-            "thresholdMarkers": true,
-            "thresholdLabels": false
-          },
+          "targets": [
+            {
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "policy": "default",
+              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where $timeFilter",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "value"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
+            }
+          ],
+          "thresholds": "5,15,30",
+          "timeShift": null,
+          "title": "Small cup - today",
           "transparent": true,
-          "minSpan": 2
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg",
+          "timeFrom": "now/d"
         },
         {
           "aliasColors": {
@@ -122,6 +124,7 @@
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
           },
           "id": 1,
+          "interval": "",
           "isNew": true,
           "legend": {
             "avg": false,
@@ -134,6 +137,7 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
@@ -156,27 +160,62 @@
                   "type": "time"
                 }
               ],
+              "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
+              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
+              "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
-                    "type": "field",
                     "params": [
                       "value"
-                    ]
+                    ],
+                    "type": "field"
                   },
                   {
-                    "type": "count",
-                    "params": []
+                    "params": [],
+                    "type": "count"
                   }
                 ]
               ],
-              "tags": [],
-              "measurement": "CoffeeMachineSmallCupButtonPress",
-              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
-              "rawQuery": true
+              "tags": []
+            },
+            {
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "value"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
             }
           ],
           "timeFrom": null,
@@ -187,6 +226,7 @@
             "shared": true,
             "value_type": "cumulative"
           },
+          "transparent": true,
           "type": "graph",
           "xaxis": {
             "show": true
@@ -208,80 +248,10 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": [],
-          "transparent": true,
-          "interval": ">1d"
+          ]
         },
         {
-          "title": "Big cup - today",
-          "error": false,
-          "span": 2,
-          "editable": true,
-          "type": "singlestat",
-          "isNew": true,
-          "id": 4,
-          "targets": [
-            {
-              "policy": "default",
-              "dsType": "influxdb",
-              "resultFormat": "time_series",
-              "tags": [],
-              "groupBy": [
-                {
-                  "type": "time",
-                  "params": [
-                    "$interval"
-                  ]
-                },
-                {
-                  "type": "fill",
-                  "params": [
-                    "null"
-                  ]
-                }
-              ],
-              "select": [
-                [
-                  {
-                    "type": "field",
-                    "params": [
-                      "value"
-                    ]
-                  },
-                  {
-                    "type": "mean",
-                    "params": []
-                  }
-                ]
-              ],
-              "refId": "A",
-              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where time > now() - 1d",
-              "rawQuery": true
-            }
-          ],
-          "links": [],
-          "datasource": "creativity_lab_openhab",
-          "maxDataPoints": 100,
-          "interval": null,
           "cacheTimeout": null,
-          "format": "none",
-          "prefix": "",
-          "postfix": "",
-          "nullText": null,
-          "valueMaps": [
-            {
-              "value": "null",
-              "op": "=",
-              "text": "N/A"
-            }
-          ],
-          "nullPointMode": "connected",
-          "valueName": "avg",
-          "prefixFontSize": "50%",
-          "valueFontSize": "80%",
-          "postfixFontSize": "50%",
-          "thresholds": "5,15,30",
           "colorBackground": false,
           "colorValue": true,
           "colors": [
@@ -289,21 +259,89 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
+          "datasource": "creativity_lab_openhab",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 50,
+            "minValue": 0,
+            "show": true,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 4,
+          "interval": "",
+          "isNew": true,
+          "links": [],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "span": 2,
           "sparkline": {
-            "show": false,
+            "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
-            "fillColor": "rgba(31, 118, 189, 0.18)"
+            "show": false
           },
-          "gauge": {
-            "show": true,
-            "minValue": 0,
-            "maxValue": 50,
-            "thresholdMarkers": true,
-            "thresholdLabels": false
-          },
+          "targets": [
+            {
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "policy": "default",
+              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where $timeFilter",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "value"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
+            }
+          ],
+          "thresholds": "5,15,30",
+          "title": "Big cup - today",
           "transparent": true,
-          "minSpan": 2
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg",
+          "timeFrom": "now/d"
         },
         {
           "aliasColors": {
@@ -321,6 +359,7 @@
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
           },
           "id": 3,
+          "interval": "",
           "isNew": true,
           "legend": {
             "avg": false,
@@ -333,10 +372,12 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
+          "minSpan": 10,
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
-          "points": true,
+          "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
           "span": 10,
@@ -353,27 +394,27 @@
                   "type": "time"
                 }
               ],
+              "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
+              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
+              "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
-                    "type": "field",
                     "params": [
                       "value"
-                    ]
+                    ],
+                    "type": "field"
                   },
                   {
-                    "type": "count",
-                    "params": []
+                    "params": [],
+                    "type": "count"
                   }
                 ]
               ],
-              "tags": [],
-              "measurement": "CoffeeMachineSmallCupButtonPress",
-              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
-              "rawQuery": true
+              "tags": []
             }
           ],
           "timeFrom": null,
@@ -384,6 +425,7 @@
             "shared": true,
             "value_type": "cumulative"
           },
+          "transparent": true,
           "type": "graph",
           "xaxis": {
             "show": true
@@ -405,81 +447,10 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": [],
-          "transparent": true,
-          "minSpan": 10,
-          "interval": ">1d"
+          ]
         },
         {
-          "title": "Power on/off - today",
-          "error": false,
-          "span": 2,
-          "editable": true,
-          "type": "singlestat",
-          "isNew": true,
-          "id": 5,
-          "targets": [
-            {
-              "policy": "default",
-              "dsType": "influxdb",
-              "resultFormat": "time_series",
-              "tags": [],
-              "groupBy": [
-                {
-                  "type": "time",
-                  "params": [
-                    "$interval"
-                  ]
-                },
-                {
-                  "type": "fill",
-                  "params": [
-                    "null"
-                  ]
-                }
-              ],
-              "select": [
-                [
-                  {
-                    "type": "field",
-                    "params": [
-                      "value"
-                    ]
-                  },
-                  {
-                    "type": "mean",
-                    "params": []
-                  }
-                ]
-              ],
-              "refId": "A",
-              "query": "select count(value) from CoffeeMachinePowerButtonPress where time > now() - 1d",
-              "rawQuery": true
-            }
-          ],
-          "links": [],
-          "datasource": "creativity_lab_openhab",
-          "maxDataPoints": 100,
-          "interval": null,
           "cacheTimeout": null,
-          "format": "none",
-          "prefix": "",
-          "postfix": "",
-          "nullText": null,
-          "valueMaps": [
-            {
-              "value": "null",
-              "op": "=",
-              "text": "N/A"
-            }
-          ],
-          "nullPointMode": "connected",
-          "valueName": "avg",
-          "prefixFontSize": "50%",
-          "valueFontSize": "80%",
-          "postfixFontSize": "50%",
-          "thresholds": "5,15,30",
           "colorBackground": false,
           "colorValue": true,
           "colors": [
@@ -487,21 +458,89 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
+          "datasource": "creativity_lab_openhab",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 50,
+            "minValue": 0,
+            "show": true,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 5,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "span": 2,
           "sparkline": {
-            "show": false,
+            "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
-            "fillColor": "rgba(31, 118, 189, 0.18)"
+            "show": false
           },
-          "gauge": {
-            "show": true,
-            "minValue": 0,
-            "maxValue": 50,
-            "thresholdMarkers": true,
-            "thresholdLabels": false
-          },
+          "targets": [
+            {
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "policy": "default",
+              "query": "select count(value) from CoffeeMachinePowerButtonPress where $timeFilter",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "value"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
+            }
+          ],
+          "thresholds": "5,15,30",
+          "title": "Power on/off - today",
           "transparent": true,
-          "minSpan": 2
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg",
+          "timeFrom": "now/d"
         },
         {
           "aliasColors": {
@@ -520,6 +559,7 @@
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
           },
           "id": 6,
+          "interval": ">1d",
           "isNew": true,
           "legend": {
             "avg": false,
@@ -532,10 +572,12 @@
           },
           "lines": true,
           "linewidth": 2,
+          "links": [],
+          "minSpan": 10,
           "nullPointMode": "connected",
           "percentage": false,
           "pointradius": 5,
-          "points": true,
+          "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
           "span": 10,
@@ -552,27 +594,27 @@
                   "type": "time"
                 }
               ],
+              "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
+              "query": "select count(value) from CoffeeMachinePowerButtonPress where $timeFilter GROUP BY time($interval)",
+              "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
-                    "type": "field",
                     "params": [
                       "value"
-                    ]
+                    ],
+                    "type": "field"
                   },
                   {
-                    "type": "count",
-                    "params": []
+                    "params": [],
+                    "type": "count"
                   }
                 ]
               ],
-              "tags": [],
-              "measurement": "CoffeeMachineSmallCupButtonPress",
-              "query": "select count(value) from CoffeeMachinePowerButtonPress where $timeFilter GROUP BY time($interval)",
-              "rawQuery": true
+              "tags": []
             }
           ],
           "timeFrom": null,
@@ -583,6 +625,7 @@
             "shared": true,
             "value_type": "cumulative"
           },
+          "transparent": true,
           "type": "graph",
           "xaxis": {
             "show": true
@@ -604,11 +647,16 @@
               "min": null,
               "show": true
             }
-          ],
-          "links": [],
-          "transparent": true,
-          "minSpan": 10,
-          "interval": ">1d"
+          ]
+        },
+        {
+          "title": "Panel Title",
+          "error": false,
+          "span": 12,
+          "editable": true,
+          "type": "pluginlist",
+          "isNew": true,
+          "id": 7
         }
       ],
       "title": "Row"
@@ -622,8 +670,8 @@
     }
   ],
   "time": {
-    "from": "now-7d",
-    "to": "now"
+    "from": "now/d",
+    "to": "now/d"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -636,7 +684,8 @@
       "30m",
       "1h",
       "2h",
-      "1d"
+      "1d",
+      "today"
     ],
     "time_options": [
       "5m",
@@ -656,8 +705,8 @@
   "annotations": {
     "list": []
   },
-  "refresh": "5s",
+  "refresh": false,
   "schemaVersion": 12,
-  "version": 8,
+  "version": 18,
   "links": []
 }
