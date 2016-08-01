@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os
 import cv2
+import datetime
 
 from optparse import OptionParser
 
@@ -48,13 +49,14 @@ PROFILE = 0
 
 class HaarObjectTracker():
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,255,0), id="", verbose=0):
+    def __init__(self, cascadeFile, childTracker=None, color=(0,255,0), id="", minNeighbors=0, verbose=0):
         
         self.detector = cv2.CascadeClassifier(cascadeFile)
         self.childTracker = childTracker
         self.color = color
         self.id = id
         self.verbose = verbose
+        self.minNeighbors = minNeighbors
         
         
     def detectAndDraw(self, frame, drawFrame):
@@ -70,9 +72,9 @@ class HaarObjectTracker():
         for (pframe, px, py, pw, ph) in childDetections:
             
             ownDetections = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
-                                                     minNeighbors=5,
+                                                     minNeighbors=self.minNeighbors,
                                                      minSize=(30, 30),
-                                                     flags=cv2.cv.CV_HAAR_SCALE_IMAGE)
+                                                     flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING)
             
             
             
@@ -90,7 +92,7 @@ class HaarObjectTracker():
     
     def trace(self, nbrObjects):
         if self.id != "" and nbrObjects > 0 and self.verbose > 0:
-            print("{id}: {n} detection(s)".format(id=self.id, n=nbrObjects))
+            print("{time} {id}: {n} detection(s)".format(time=datetime.datetime.now(), id=self.id, n=nbrObjects))
         
 class LowerFaceTracker(HaarObjectTracker):
     
@@ -112,12 +114,12 @@ class LowerFaceTracker(HaarObjectTracker):
         for (pframe, px, py, pw, ph) in childDetections:
             
             noses = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
-                                                     minNeighbors=5,
+                                                     minNeighbors=self.minNeighbors,
                                                      minSize=(30, 30),
-                                                     flags=cv2.cv.CV_HAAR_SCALE_IMAGE)
+                                                     flags=cv2.CASCADE_SCALE_IMAGE)
             
             # select the lowest nose
-            lowest_y = 999999L
+            lowest_y = 999999
             for (nx, ny, nw, nh) in noses:
                 if ny < lowest_y:
                     lowest_y = ny
@@ -125,7 +127,7 @@ class LowerFaceTracker(HaarObjectTracker):
                     lw = nw
                     lh = nh
 
-            if lowest_y == 999999L: # no nose detected
+            if lowest_y == 999999: # no nose detected
                 continue
             
             
@@ -190,16 +192,16 @@ def main(argv=None):
         
         
         if opts.face_model is not None:
-            faceTracker = HaarObjectTracker(cascadeFile=opts.face_model, id="face-tracker")
+            faceTracker = HaarObjectTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
             
             if opts.nose_model is not None:
                 lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = faceTracker, id="nose-tracker")
-                smileTracker = HaarObjectTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", verbose=1)
+                smileTracker = HaarObjectTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1)
             else:
-                smileTracker = HaarObjectTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", verbose=1)
+                smileTracker = HaarObjectTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
         else:
-            smileTracker = HaarObjectTracker(opts.smile_model, None, (255,0,0), "smile-tracker", verbose=1)
+            smileTracker = HaarObjectTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
         
         try:
@@ -234,7 +236,7 @@ def main(argv=None):
         sys.stderr.write("program will exit\nBye!\n")
         return 0
        
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write(str(e) + "\n")
         return 2
 
