@@ -208,17 +208,29 @@ class FaceTracker(HaarObjectTracker):
         return maxFace
         
     
+    def loadTrainingImgs():
+        print("TODO")
+        
+
+    def train():
+        print("TODO")
+        
+
+    def recognizeFace() :    
+        print("TODO")
+	
+    
 class LowerFaceTracker(HaarObjectTracker):
     
-    def __init__(self, noseCascadeFile, childTracker=None, color=(0,0,255), id=""):
+    def __init__(self, noseCascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=10):
         HaarObjectTracker.__init__(self, noseCascadeFile, childTracker, color, id)
 
     
-    def detectAndDraw(self, frame, drawFrame):
+    def detectAndDraw(self, frame, drawFrame, fps):
         
         if self.childTracker is not None:
             
-            childDetections = self.childTracker.detectAndDraw(frame, drawFrame)
+            childDetections = self.childTracker.detectAndDraw(frame, drawFrame, fps)
         
         else:
             childDetections = [(frame, 0, 0, frame.shape[1], frame.shape[0])]
@@ -382,7 +394,7 @@ def main(argv=None):
             faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
             
             if opts.nose_model is not None:
-                lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = faceTracker, id="nose-tracker")
+                lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = faceTracker, id="nose-tracker", minNeighbors = 10)
                 smileTracker = SmileTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1)
             else:
                 smileTracker = SmileTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
