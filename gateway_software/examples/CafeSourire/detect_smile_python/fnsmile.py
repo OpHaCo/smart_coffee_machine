@@ -32,11 +32,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import os
+
+#raspberry check
+isArmHw = False
+if os.uname()[4][:3] == "arm" :
+    print("   Program {0} runs on arm hardware".format(sys.argv[0]))
+    isArmHw = True
+else :
+    print("   Program {0} runs on non arm hardware".format(sys.argc[0]))
+
 import cv2
 import time
 import datetime
 import traceback 
 import numpy
+
+#We suppose arm target is raspberry
+if isArmHw :
+    from picamera.array import PiRGBArray
+    from picamera import PiCamera
 
 from optparse import OptionParser
 
@@ -220,8 +234,80 @@ class LowerFaceTracker(HaarObjectTracker):
         self.trace(len(retDetections))
             
         return retDetections
+
+
+def handleFrame(frame, tracker) :
+
+    if handleFrame.capturedFrames == 0 :
+        handleFrame.start = time.time()
     
+    handleFrame.capturedFrames += 1
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
+    # Adaptative histogram equalization
+    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    #gray = clahe.apply(gray)
+
+    if handleFrame.fps != 0 :
+        tracker.detectAndDraw(gray, frame, handleFrame.fps)
+    
+    cv2.imshow('Video', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+       return False 
+
+    if handleFrame.capturedFrames == 40 :
+        handleFrame.fps = handleFrame.capturedFrames / (time.time() - handleFrame.start)
+        handleFrame.capturedFrames = 0
+        print("fps = {}".format(handleFrame.fps))
+        
+    return True
+
+#handleFrame() static variables
+handleFrame.fps = 0
+handleFrame.capturedFrames = 0
+handleFrame.start = 0
+
+def capture(tracker):
+    try :
+            videoCapture = cv2.VideoCapture(int(opts.video_source))
+            videoCapture.grab()
+    
+    except ValueError as e:
+          videoCapture = cv2.VideoCapture(opts.video_source)
+    
+    while True :
+        ret, frame = videoCapture.read()    
+        if not ret:
+            break
+            
+        if not handleFrame(frame, tracker):
+            break
+            
+    videoCapture.release()
+
+
+def rpiCapture(tracker):
+
+    # initialize the camera and grab a reference to the raw camera capture
+    camera= PiCamera()
+    camera.resolution = (320, 240)
+    camera.framerate = 32
+    rawCapture = PiRGBArray(camera, size=(320, 240))
+    
+    # allow the camera to warmup
+    time.sleep(0.1)
+     
+    # capture frames from the camera
+    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True) :
+	# grab the raw NumPy array representing the image, then initialize the timestamp
+	# and occupied/unoccupied text
+        image = frame.array
+     
+        handleFrame(image, tracker)	    		
+ 
+	# clear the stream in preparation for the next frame
+        rawCapture.truncate(0)    
 
 
 def main(argv=None):
@@ -277,51 +363,13 @@ def main(argv=None):
             smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
         
-        try:
-            videoCapture = cv2.VideoCapture(int(opts.video_source))
-            videoCapture.grab()
-        except ValueError as e:
-            videoCapture = cv2.VideoCapture(opts.video_source)
+        if isArmHw :
+            rpiCapture(smileTracker)
+
+        else :
+            capture(smileTracker)
         
-        capturedFrames = 0
-        fps = 0
-        #smile duration in ms
-        smileDurationCrit = 100
-        smileDuration = 0
-
-        while True:
-            
-            if capturedFrames == 0 :
-                start = time.time()
-            
-            ret, frame = videoCapture.read()
-            capturedFrames = capturedFrames + 1
-
-            #fps = videoCapture.get(cv2.CAP_PROP_FPS)
-            #print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
-                         
-            if not ret:
-                break
-            
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            # Adaptative histogram equalization
-            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            #gray = clahe.apply(gray)
-
-            smileTracker.detectAndDraw(gray, frame, fps)
-            
-            cv2.imshow('Video', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-            if capturedFrames == 40 :
-                fps = capturedFrames / (time.time() - start)
-                capturedFrames = 0
-            
-        videoCapture.release()
         cv2.destroyAllWindows()        
-            
     
     except KeyboardInterrupt as k:
         sys.stderr.write("program will exit\nBye!\n")
