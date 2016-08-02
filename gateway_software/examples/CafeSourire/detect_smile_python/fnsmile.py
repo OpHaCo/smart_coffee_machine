@@ -33,7 +33,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os
 import cv2
+import time
 import datetime
+import traceback 
+import numpy
 
 from optparse import OptionParser
 
@@ -50,23 +53,37 @@ PROFILE = 0
 class HaarObjectTracker():
     
     def __init__(self, cascadeFile, childTracker=None, color=(0,255,0), id="", minNeighbors=0, verbose=0):
-        
         self.detector = cv2.CascadeClassifier(cascadeFile)
         self.childTracker = childTracker
         self.color = color
         self.id = id
         self.verbose = verbose
         self.minNeighbors = minNeighbors
+        self.fps = 0 
+
+    def detectAndDraw(self, frame, drawFrame, fps):
         
-        
-    def detectAndDraw(self, frame, drawFrame):
+        self.fps = fps
+        childDetections = self.detectChild(frame, drawFrame)
+        detections = self.detect(childDetections)
+        self.draw(detections, drawFrame)    
+        self.trace(len(detections))
+        return detections 
+
+
+    def detectChild(self, frame, drawFrame):
         
         if self.childTracker is not None:
-            childDetections = self.childTracker.detectAndDraw(frame, drawFrame)
+            childDetections = self.childTracker.detectAndDraw(frame, drawFrame, self.fps)
         
         else:
             childDetections = [(frame, 0, 0, frame.shape[1], frame.shape[0])]
-         
+
+        return childDetections
+    
+
+    def detect(self, childDetections):
+        
         retDetections = []
            
         for (pframe, px, py, pw, ph) in childDetections:
@@ -75,25 +92,81 @@ class HaarObjectTracker():
                                                      minNeighbors=self.minNeighbors,
                                                      minSize=(30, 30),
                                                      flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING)
-            
-            
-            
-            for (x, y, w, h) in ownDetections:
-                cv2.rectangle(drawFrame, (x+px, y+py), (x+px+w, y+py+h), self.color, 2)
+            for(x, y, w, h) in ownDetections :    
+               
+                #add detected rectangle
                 rframe = pframe[y:y+h, x:x+w]
                 # translate coordinate to correspond the the initial frame
                 retDetections.append((rframe, x+px, y+py, w, h))
 
-        self.trace(len(retDetections))
-        
         return retDetections
-    
-    
+
+
+    def draw(self, detectedObjects, drawFrame):
+        
+        for (frame, x, y, w, h) in detectedObjects:
+            cv2.rectangle(drawFrame, (x, y), (x+w, y+h), self.color, 2)
+            
     
     def trace(self, nbrObjects):
         if self.id != "" and nbrObjects > 0 and self.verbose > 0:
             print("{time} {id}: {n} detection(s)".format(time=datetime.datetime.now(), id=self.id, n=nbrObjects))
+
         
+class SmileTracker(HaarObjectTracker):
+    
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0):
+        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
+        
+        #minimum smile duration
+        self.MIN_SMILE_DUR = 300
+        #currentsmile duration in ms
+        self.smileDuration = 0
+
+    def detect(self, childDetections ):
+        
+        detectedSmiles = []
+        rawDetectedSmiles = super().detect(childDetections)
+        haarCascadeCrit = 0
+        
+        if len(childDetections) > 0 :
+            faceSize = childDetections[0][3]*childDetections[0][4]
+            #criterion over number of detected smiles : depends on face size    
+            haarCascadeCrit = faceSize*0.00476
+
+        if len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
+            self.smileDuration = self.smileDuration + 1/self.fps*1000
+            
+            if(self.smileDuration > self.MIN_SMILE_DUR) :
+                print("smile detected during {0}ms".format(self.smileDuration))
+                #mean for found smile               
+                rects = numpy.delete(rawDetectedSmiles, 0, 1)
+                rects = numpy.mean(rects, axis = 0)
+                detectedSmiles = [(rawDetectedSmiles[0][0], int(rects[0]), int(rects[1]), int(rects[2]), int(rects[3]))]
+        else:
+            self.smileDuration = 0
+        
+        return detectedSmiles
+
+
+class FaceTracker(HaarObjectTracker):
+    
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0):
+        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
+    
+
+    def detect(self, childDetections):
+        detectedFaces = super().detect(childDetections)
+        
+        #only get biggest face
+        maxFace = [] 
+        for (frame, x, y, w, h) in detectedFaces :
+            if len(maxFace) == 0 or w*h > maxFace[0][3]*maxFace[0][4] :
+                maxFace = [(frame, x, y, w, h)] 
+
+        return maxFace
+        
+    
 class LowerFaceTracker(HaarObjectTracker):
     
     def __init__(self, noseCascadeFile, childTracker=None, color=(0,0,255), id=""):
@@ -192,16 +265,16 @@ def main(argv=None):
         
         
         if opts.face_model is not None:
-            faceTracker = HaarObjectTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
+            faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
             
             if opts.nose_model is not None:
                 lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = faceTracker, id="nose-tracker")
-                smileTracker = HaarObjectTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1)
+                smileTracker = SmileTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1)
             else:
-                smileTracker = HaarObjectTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
+                smileTracker = SmileTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
         else:
-            smileTracker = HaarObjectTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
+            smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
         
         try:
@@ -210,23 +283,41 @@ def main(argv=None):
         except ValueError as e:
             videoCapture = cv2.VideoCapture(opts.video_source)
         
-        
+        capturedFrames = 0
+        fps = 0
+        #smile duration in ms
+        smileDurationCrit = 100
+        smileDuration = 0
+
         while True:
             
-            videoCapture
-            ret, frame = videoCapture.read()
+            if capturedFrames == 0 :
+                start = time.time()
             
+            ret, frame = videoCapture.read()
+            capturedFrames = capturedFrames + 1
+
+            #fps = videoCapture.get(cv2.CAP_PROP_FPS)
+            #print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+                         
             if not ret:
                 break
             
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
-            smileTracker.detectAndDraw(gray, frame)
+            # Adaptative histogram equalization
+            #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            #gray = clahe.apply(gray)
+
+            smileTracker.detectAndDraw(gray, frame, fps)
             
             cv2.imshow('Video', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-            
+
+            if capturedFrames == 40 :
+                fps = capturedFrames / (time.time() - start)
+                capturedFrames = 0
             
         videoCapture.release()
         cv2.destroyAllWindows()        
@@ -238,6 +329,9 @@ def main(argv=None):
        
     except Exception as e:
         sys.stderr.write(str(e) + "\n")
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
         return 2
 
 
