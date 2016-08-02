@@ -39,13 +39,14 @@ if os.uname()[4][:3] == "arm" :
     print("   Program {0} runs on arm hardware".format(sys.argv[0]))
     isArmHw = True
 else :
-    print("   Program {0} runs on non arm hardware".format(sys.argc[0]))
+    print("   Program {0} runs on non arm hardware".format(sys.argv[0]))
 
 import cv2
 import time
 import datetime
 import traceback 
 import numpy
+import paho.mqtt.client as mqtt
 
 #We suppose arm target is raspberry
 if isArmHw :
@@ -125,7 +126,6 @@ class HaarObjectTracker():
     def trace(self, nbrObjects):
         if self.id != "" and nbrObjects > 0 and self.verbose > 0:
             print("{time} {id}: {n} detection(s)".format(time=datetime.datetime.now(), id=self.id, n=nbrObjects))
-
         
 class SmileTracker(HaarObjectTracker):
     
@@ -136,6 +136,12 @@ class SmileTracker(HaarObjectTracker):
         self.MIN_SMILE_DUR = 300
         #currentsmile duration in ms
         self.smileDuration = 0
+        self.mqttClient = mqtt.Client()
+        self.mqttClient.on_connect = self.onMQTTConnect
+        self.mqttClient.on_message = self.onMQTTMessage
+        self.mqttClient.connect("192.168.132.100", 1883, 60)
+        self.mqttClient.loop_start()
+        self.smileOnGoing = False 
 
     def detect(self, childDetections ):
         
@@ -147,21 +153,42 @@ class SmileTracker(HaarObjectTracker):
             faceSize = childDetections[0][3]*childDetections[0][4]
             #criterion over number of detected smiles : depends on face size    
             haarCascadeCrit = faceSize*0.00476
+        
+        #if len(childDetections) > 0 :
+        #    print("number of raw smile  / criterion : {} / {}".format(len(rawDetectedSmiles), haarCascadeCrit))
 
         if len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
             self.smileDuration = self.smileDuration + 1/self.fps*1000
             
             if(self.smileDuration > self.MIN_SMILE_DUR) :
-                print("smile detected during {0}ms".format(self.smileDuration))
+                if(not self.smileOnGoing) :
+                    self.smileOnGoing = True
+                    print("smile detected")
+                    self.mqttClient.publish("/CafeSourire/smile", "1")
+            
                 #mean for found smile               
                 rects = numpy.delete(rawDetectedSmiles, 0, 1)
                 rects = numpy.mean(rects, axis = 0)
                 detectedSmiles = [(rawDetectedSmiles[0][0], int(rects[0]), int(rects[1]), int(rects[2]), int(rects[3]))]
         else:
+            if self.smileOnGoing :
+                print("smile duration was {}".format(self.smileDuration))
+            self.smileOnGoing = False
             self.smileDuration = 0
         
         return detectedSmiles
+    
+    
+    def onMQTTConnect(self, client, userdata, flags, rc):
+        print("Connected to MQTT broker with result code "+str(rc))
+            
+        # Subscribing in on_connect() means that if we lose the connection and
+        # reconnect then subscriptions will be renewed.
+        #client.subscribe("#")
 
+    def onMQTTMessage(userdataMess, msg) :
+        print(msg.topic + " " + str(msg.payload))
+        
 
 class FaceTracker(HaarObjectTracker):
     
@@ -246,13 +273,14 @@ def handleFrame(frame, tracker) :
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Adaptative histogram equalization
-    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    #gray = clahe.apply(gray)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    gray = clahe.apply(gray)
+        
 
     if handleFrame.fps != 0 :
-        tracker.detectAndDraw(gray, frame, handleFrame.fps)
+        tracker.detectAndDraw(gray, gray, handleFrame.fps)
     
-    cv2.imshow('Video', frame)
+    cv2.imshow('Video', gray)
     if cv2.waitKey(1) & 0xFF == ord('q'):
        return False 
 
@@ -268,7 +296,7 @@ handleFrame.fps = 0
 handleFrame.capturedFrames = 0
 handleFrame.start = 0
 
-def capture(tracker):
+def capture(tracker, opts):
     try :
             videoCapture = cv2.VideoCapture(int(opts.video_source))
             videoCapture.grab()
@@ -287,7 +315,7 @@ def capture(tracker):
     videoCapture.release()
 
 
-def rpiCapture(tracker):
+def rpiCapture(tracker, opts):
 
     # initialize the camera and grab a reference to the raw camera capture
     camera= PiCamera()
@@ -362,12 +390,11 @@ def main(argv=None):
         else:
             smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
-        
         if isArmHw :
-            rpiCapture(smileTracker)
+            rpiCapture(smileTracker, opts)
 
         else :
-            capture(smileTracker)
+            capture(smileTracker, opts)
         
         cv2.destroyAllWindows()        
     
