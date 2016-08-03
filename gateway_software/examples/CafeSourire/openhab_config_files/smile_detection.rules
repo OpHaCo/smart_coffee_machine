@@ -1,0 +1,77 @@
+var Number setBrewOnGoing = 0
+
+rule SmileDetected
+when
+    Item SmileDetected received update
+then
+    logInfo("rules", CoffeeMachineStatus.state.toString())
+    
+    sendCommand(setBrew, "STRONG")
+    
+    if(CoffeeMachineStatus.state.toString() == "0")
+    {
+        logInfo("rules", "Coffee machine OFF")
+        sendCommand(CoffeeMachinePowerButtonPress, ON)
+        
+        sendCommand(setBrew, "STRONG")
+        
+        Thread::sleep(2000)
+        if(CoffeeMachineStatus.state.toString() == "4"
+            || CoffeeMachineStatus.state.toString() == "5"
+            || CoffeeMachineStatus.state.toString() == "6"
+            || CoffeeMachineStatus.state.toString() == "7"
+            || CoffeeMachineStatus.state.toString() == "12")
+        {
+            //sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+        }
+        else
+        {
+            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
+        }
+    }   
+    else if(CoffeeMachineStatus.state.toString() == "1")
+    {
+        logInfo("rules", CoffeeMachineStatus.state)
+    }
+    
+end
+
+rule SetBrew
+when
+    Item setBrew received command     
+then
+    logInfo("rules", "enter")
+    if(setBrewOnGoing == 1)
+    {
+        logInfo("rules", "reject")
+    }
+    else
+    {
+      logInfo("rules", "Set brew to " + receivedCommand.toString())
+      setBrewOnGoing = 1;
+    
+      if(CoffeeMachineStatus.state.toString() != "6")
+      {
+        var index = 0
+        while(index <= 3)
+        {
+          logInfo("rules", "but actual state is " + CoffeeMachineStatus.state.toString())
+          sendCommand(CoffeeMachineBrewButtonPress, 1)
+          Thread::sleep(10000)
+          
+          if(CoffeeMachineStatus.state.toString() == "6")
+            index = 3
+                        
+          index = index + 1
+        }
+        
+        
+    }
+    else
+    {
+        logInfo("rules", "Already to strong")
+      }
+      setBrewOnGoing = 0
+    }
+    
+end
