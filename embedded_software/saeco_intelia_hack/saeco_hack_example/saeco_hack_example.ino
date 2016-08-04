@@ -77,6 +77,7 @@ static void setupMQTTSubs(void);
 static void mqttSubscribe(const char* topic);
 static void setupMQTTConnection(void);
 static void getCoffeeMachineStatus(void);
+static void sendStatus(void);
 
 /**************************************************************************
  * Static Variables
@@ -88,6 +89,7 @@ static String _coffeeMachineTopicPrefix = "/amiqual4home/machine_place/";
 static String _coffeeMachineOnBtnPressTopic;
 static String _coffeeMachineAliveTopic;
 static String _coffeeMachineStatusTopic;
+static String _getCoffeeMachineStatusTopic;
 
 static String _coffeeMachinePowerTopic;
 static String _coffeeMachineSmallCoffeeTopic;
@@ -179,6 +181,10 @@ static void onMQTTMsgReceived(char* topic, byte* payload, unsigned int length) {
   else if(strcmp(topic, _coffeeMachineBrewTopic.c_str()) == 0)
   {
     saecoIntelia_brew();
+  }
+  else if(strcmp(topic, _getCoffeeMachineStatusTopic.c_str()) == 0)
+  {
+    sendStatus();
   }
 }
 
@@ -353,6 +359,7 @@ static void setupMQTTTopics(void)
   _coffeeMachineTopicPrefix += _coffeeMachineName;
 
   _coffeeMachineStatusTopic= _coffeeMachineTopicPrefix + '/' + "status";
+  _getCoffeeMachineStatusTopic= _coffeeMachineTopicPrefix + '/' + "getStatus";
   _coffeeMachineOnBtnPressTopic= _coffeeMachineTopicPrefix + '/' + "on_button_press";
   _coffeeMachineAliveTopic= _coffeeMachineTopicPrefix + '/' + "alive";
   
@@ -379,6 +386,7 @@ static void setupMQTTSubs(void)
   mqttSubscribe(_coffeeMachineTeaTopic.c_str());
   mqttSubscribe(_coffeeMachineCleanTopic.c_str());
   mqttSubscribe(_coffeeMachineBrewTopic.c_str());
+  mqttSubscribe(_getCoffeeMachineStatusTopic.c_str());
 }
 
 static void mqttSubscribe(const char* topic)
@@ -451,13 +459,17 @@ static void getCoffeeMachineStatus(void)
     Serial.print("status = ");
     Serial.print(_machineStatus);
 
+    sendStatus();
+  }
+}
+
+static void sendStatus(void)
+{
     if (!_mqttClient.publish(_coffeeMachineStatusTopic.c_str(), String(_machineStatus).c_str())) {
       Serial.print("Publish failed on topic ");
       Serial.println(_coffeeMachineStatusTopic.c_str());
     }
-  }
 }
-
 
 
 

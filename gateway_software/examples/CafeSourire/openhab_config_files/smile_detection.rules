@@ -1,38 +1,81 @@
-var Number setBrewOnGoing = 0
+var boolean setBrewOnGoing = false
+var boolean coffeeOnGoing = false
 
 rule SmileDetected
 when
     Item SmileDetected received update
 then
-    logInfo("rules", CoffeeMachineStatus.state.toString())
-    
-    sendCommand(setBrew, "STRONG")
-    
-    if(CoffeeMachineStatus.state.toString() == "0")
-    {
-        logInfo("rules", "Coffee machine OFF")
-        sendCommand(CoffeeMachinePowerButtonPress, ON)
-        
-        sendCommand(setBrew, "STRONG")
-        
-        Thread::sleep(2000)
-        if(CoffeeMachineStatus.state.toString() == "4"
-            || CoffeeMachineStatus.state.toString() == "5"
-            || CoffeeMachineStatus.state.toString() == "6"
-            || CoffeeMachineStatus.state.toString() == "7"
-            || CoffeeMachineStatus.state.toString() == "12")
-        {
-            //sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
-        }
-        else
-        {
-            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
-        }
-    }   
-    else if(CoffeeMachineStatus.state.toString() == "1")
-    {
-        logInfo("rules", CoffeeMachineStatus.state)
-    }
+	if(coffeeOnGoing)
+	{
+		logInfo("rules", "Cannot make coffee - a coffee is already on going")
+	}
+	else
+	{
+		coffeeOnGoing = true
+		
+		// get actual status
+		sendCommand(getCoffeeMachineStatus, ON)
+		Thread::sleep(300)
+		
+	    // configure coffee brew
+	    //sendCommand(setBrew, "STRONG")
+	    
+	    if(CoffeeMachineStatus.state.toString() == "0")
+	    {
+	        logInfo("rules", "Coffee machine OFF")
+	        sendCommand(CoffeeMachinePowerButtonPress, ON)
+	        
+	        Thread::sleep(2000)
+	        if(CoffeeMachineStatus.state.toString() == "4"
+	            || CoffeeMachineStatus.state.toString() == "5"
+	            || CoffeeMachineStatus.state.toString() == "6"
+	            || CoffeeMachineStatus.state.toString() == "7"
+	            || CoffeeMachineStatus.state.toString() == "12")
+	        {
+	        	logInfo("rules", "Ready to make coffee")
+	            sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+	        }
+	        else if(CoffeeMachineStatus.state.toString() == "3"
+	            || CoffeeMachineStatus.state.toString() == "13")
+	        {
+	        	logInfo("rules", "Water is warming - wait 10s")
+	        	
+	        	// Water is warming or purge => wait
+	        	Thread::sleep(15000)
+	        	if(CoffeeMachineStatus.state.toString() == "4"
+	            	|| CoffeeMachineStatus.state.toString() == "5"
+	            	|| CoffeeMachineStatus.state.toString() == "6"
+	            	|| CoffeeMachineStatus.state.toString() == "7"
+	            	|| CoffeeMachineStatus.state.toString() == "12")
+	            {
+	            	logInfo("rules", "Ready to make coffee")	
+	            	sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)	
+	            }
+	            else
+	            {
+	            	logInfo("rules", "Cannot make coffee - status " + CoffeeMachineStatus.state.toString())
+	            }
+	        	
+	        }
+	        else
+	        {
+	            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
+	        }
+	    }   
+	    else if(CoffeeMachineStatus.state.toString() == "4"
+	            || CoffeeMachineStatus.state.toString() == "5"
+	            || CoffeeMachineStatus.state.toString() == "6"
+	            || CoffeeMachineStatus.state.toString() == "7"
+	            || CoffeeMachineStatus.state.toString() == "12")
+	    {
+	        	sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+	    }
+	    else
+	    {
+	            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
+	    }
+      coffeeOnGoing = false
+	}
     
 end
 
@@ -43,35 +86,34 @@ then
     logInfo("rules", "enter")
     if(setBrewOnGoing == 1)
     {
-        logInfo("rules", "reject")
+        logInfo("rules", "Brew on going ... exit from rule")
     }
     else
     {
       logInfo("rules", "Set brew to " + receivedCommand.toString())
-      setBrewOnGoing = 1;
+      setBrewOnGoing = true;
     
       if(CoffeeMachineStatus.state.toString() != "6")
       {
         var index = 0
-        while(index <= 3)
+        var boolean exitLoop = false
+        while(index <= 3 && !exitLoop)
         {
           logInfo("rules", "but actual state is " + CoffeeMachineStatus.state.toString())
           sendCommand(CoffeeMachineBrewButtonPress, 1)
-          Thread::sleep(10000)
+          Thread::sleep(5000)
           
           if(CoffeeMachineStatus.state.toString() == "6")
-            index = 3
+            exitLoop = true
                         
           index = index + 1
         }
-        
-        
     }
     else
     {
         logInfo("rules", "Already to strong")
       }
-      setBrewOnGoing = 0
+      setBrewOnGoing = false
     }
     
 end

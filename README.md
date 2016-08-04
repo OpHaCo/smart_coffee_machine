@@ -284,6 +284,8 @@ Here are MQTT topics for example given in :
 
 - **"/amiqual4home/machine_place/saeco_intelia/clean"**     : sending any byte to this value will simulate a short press on clean button
 
+- **"/amiqual4home/machine_place/saeco_intelia/getStatus"** : when it receives this command, coffee machine hack send its status
+
 Get a small coffee over MQTT :
 
     mosquitto_pub -h MQTT_BROKER_IP -t /amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee -m 1
