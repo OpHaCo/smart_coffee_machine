@@ -64,6 +64,9 @@ DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
+_trainingImages = []
+_labels = []
+_eigenModel = None
 
 class HaarObjectTracker():
     
@@ -133,7 +136,7 @@ class SmileTracker(HaarObjectTracker):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
         
         #minimum smile duration
-        self.MIN_SMILE_DUR = 300
+        self.MIN_SMILE_DUR = 500
         #currentsmile duration in ms
         self.smileDuration = 0
         self.mqttClient = mqtt.Client()
@@ -148,14 +151,14 @@ class SmileTracker(HaarObjectTracker):
         detectedSmiles = []
         rawDetectedSmiles = super().detect(childDetections)
         haarCascadeCrit = 0
-        
+       
         if len(childDetections) > 0 :
             faceSize = childDetections[0][3]*childDetections[0][4]
             #criterion over number of detected smiles : depends on face size    
-            haarCascadeCrit = faceSize*0.00476
+            haarCascadeCrit = faceSize*0.0045
         
-        #if len(childDetections) > 0 :
-        #    print("number of raw smile  / criterion : {} / {}".format(len(rawDetectedSmiles), haarCascadeCrit))
+        if len(childDetections) > 0 :
+            print("number of raw smile  / criterion : {} / {}".format(len(rawDetectedSmiles), haarCascadeCrit))
 
         if len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
             self.smileDuration = self.smileDuration + 1/self.fps*1000
@@ -203,7 +206,10 @@ class FaceTracker(HaarObjectTracker):
         maxFace = [] 
         for (frame, x, y, w, h) in detectedFaces :
             if len(maxFace) == 0 or w*h > maxFace[0][3]*maxFace[0][4] :
-                maxFace = [(frame, x, y, w, h)] 
+                maxFace = [(frame, x, y, w, h)]
+                #try to detect face from eigen vectors
+                foundLabel = _eigenModel.predict(cv2.resize(frame, (_trainingImages[0].shape[1], _trainingImages[0].shape[0]), interpolation = cv2.INTER_AREA))
+                print("Detected face label = {}".format(foundLabel))
 
         return maxFace
         
@@ -275,7 +281,7 @@ class LowerFaceTracker(HaarObjectTracker):
         return retDetections
 
 
-def handleFrame(frame, tracker) :
+def handleFrame(frame, tracker, opts) :
 
     if handleFrame.capturedFrames == 0 :
         handleFrame.start = time.time()
@@ -292,9 +298,10 @@ def handleFrame(frame, tracker) :
     if handleFrame.fps != 0 :
         tracker.detectAndDraw(gray, gray, handleFrame.fps)
     
-    cv2.imshow('Video', gray)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-       return False 
+    if opts.video_stream :
+        cv2.imshow('Video', gray)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+           return False 
 
     if handleFrame.capturedFrames == 40 :
         handleFrame.fps = handleFrame.capturedFrames / (time.time() - handleFrame.start)
@@ -321,7 +328,7 @@ def capture(tracker, opts):
         if not ret:
             break
             
-        if not handleFrame(frame, tracker):
+        if not handleFrame(frame, tracker, opts):
             break
             
     videoCapture.release()
@@ -344,10 +351,83 @@ def rpiCapture(tracker, opts):
 	# and occupied/unoccupied text
         image = frame.array
      
-        handleFrame(image, tracker)	    		
+        handleFrame(image, tracker, opts)	    		
  
 	# clear the stream in preparation for the next frame
         rawCapture.truncate(0)    
+
+def train() :
+    global _eigenModel
+    global _trainingImages
+    global _labels
+    
+    #Get the height from the first image. We'll need this
+    # later in code to reshape the images to their original
+    # size:
+    height = len(_trainingImages[0])
+    print("training image height = {}".format(height))
+    # The following lines simply get the last images from
+    # your dataset and remove it from the vector. This is
+    # done, so that the training data (which we learn the
+    # cv::BasicFaceRecognizer on) and the test data we test
+    # the model with, do not overlap.
+    testImage = _trainingImages[len(_trainingImages) - 1]
+    testLabel = _labels[len(_labels) - 1]
+    _trainingImages.pop();
+    _labels.pop();
+    # The following lines create an Eigenfaces model for
+    # face recognition and train it with the images and
+    # labels read from training images.
+    # This here is a full PCA, if you just want to keep
+    # 10 principal components (read Eigenfaces), then call
+    # the factory method like this:
+    #
+    #      cv::createEigenFaceRecognizer(10);
+    #
+    # If you want to create a FaceRecognizer with a
+    # confidence threshold (e.g. 123.0), call it with:
+    #
+    #      cv::createEigenFaceRecognizer(10, 123.0);
+    #
+    # If you want to use _all_ Eigenfaces and have a threshold,
+    # then call the method like this:
+    #
+    #      cv::createEigenFaceRecognizer(0, 123.0);
+    #
+    _eigenModel = cv2.face.createEigenFaceRecognizer()
+    _eigenModel.train(numpy.asarray(_trainingImages), numpy.asarray(_labels))  
+    
+    #for testing
+    initTime = time.time()
+    predictedLabel = _eigenModel.predict(testImage);
+    print("Prediction took {}ms".format((time.time() - initTime)*1000))
+    # 
+    # To get the confidence of a prediction call the model with:
+    #
+    #      int predictedLabel = -1;
+    #      double confidence = 0.0;
+    #      model->predict(testSample, predictedLabel, confidence);
+    #
+    print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
+
+def openTrainingImages(imageFolder) :
+    if(not os.path.isdir(imageFolder)) :
+        raise Exception("Invalid training image folder given.")
+
+    label = 0
+    for dirname, dirnames, filenames in os.walk(imageFolder):
+        for subdirname in dirnames:
+            subject_path = os.path.join(dirname, subdirname)
+            for filename in os.listdir(subject_path):
+                abs_path = "%s/%s" % (subject_path, filename)
+                _trainingImages.append(cv2.imread(abs_path, 0))
+                _labels.append(label)
+            label = label + 1	
+    if(len(_trainingImages) <= 1) :
+        raise Exception("Not enough training images - at least 2 images must be given")              
+    else :
+        print("{} images have been read".format(len(_trainingImages)))            
+     
 
 
 def main(argv=None):
@@ -358,14 +438,17 @@ def main(argv=None):
     program_build_date = "%s" % __updated__
  
     program_version_string = '%%prog %s (%s)*****' % (program_version, program_build_date)
-    program_usage = "Usage: python %s -s smile_model [-f face_model [-n nose_model]] [-d video_device].\
+    program_usage = "Usage: python %s -s smile_model [-f face_model [-n nose_model]] [-d video_device] [-stream].\
     \nFor more information run python %s --help" % (program_name, program_name)
     
     program_longdesc = "Read a video stream from a capture device or of file and track smiles on each frame.\
                         The default behavior is to scan the whole frame in search of smiles.\
                         If a face model is supplied (option -f), then search a smile is searched on the detected face.\
                         If a nose model is supplied (option -n, requires -f), the a smile is searched within the lower\
-                        part of the face, taking the nose as a split point."
+                        part of the face, taking the nose as a split point.\
+                        If -a option given, capture stream and detected objects are displayed.\
+                        If -t option given, then training faces are loaded from given folder.\
+                        "
                         
     program_license = "Copyright 2015 Amine Sehili (<amine.sehili@gmail.com>).  Licensed under the GNU CPL v03"
  
@@ -377,10 +460,10 @@ def main(argv=None):
         parser.add_option("-f", "--face-model", dest="face_model", default=None, help="Cascade model for face detection (optional)", metavar="FILE")
         parser.add_option("-n", "--nose-model", dest="nose_model", default=None, help="Cascade model for nose detection (optional, requires -f)", metavar="FILE")
         parser.add_option("-s", "--smile-model", dest="smile_model", default=None, help="Cascade model for smile detection (mandatory)", metavar="FILE")
-        
         parser.add_option("-v", "--video-source", dest="video_source", default="0", help="If an integer, try reading from the webcam, else open video file", metavar="INT/FILE")
-        
-    
+        parser.add_option("-a", "--video-stream", action="store_true", dest="video_stream", default=False, help="Show video stream with detected objects (optional)")
+        parser.add_option("-t", "--training-set", dest="training_set_folder", default=None, help="Face training set folder(mandatory)")
+
         (opts, args) = parser.parse_args(argv)
         
         if opts.smile_model is None:
@@ -402,6 +485,15 @@ def main(argv=None):
         else:
             smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
             
+        if opts.training_set_folder is None :
+             raise Exception(program_usage)
+         
+        openTrainingImages(opts.training_set_folder)    
+        
+        initTime = time.time()
+        train()
+        print("Training with {} images took {}ms".format(len(_trainingImages), (time.time() - initTime)*1000))
+
         if isArmHw :
             rpiCapture(smileTracker, opts)
 
