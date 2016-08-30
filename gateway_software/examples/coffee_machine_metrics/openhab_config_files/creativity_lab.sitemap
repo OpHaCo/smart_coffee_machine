@@ -1,9 +1,20 @@
-sitemap demo label="Creativity Lab"
+sitemap demo label="Creativity Lab" {
 
     Frame label="Coffee machine" {
          Text label="Button states"  {
-                Group item=gCoffeeMachine
+                Switch item=CoffeeMachinePowerButton mappings=[""="Power"]
+                Switch item=CoffeeMachineCoffeeButton mappings=[""="Coffee"]
+                Switch item=CoffeeMachineSmallCoffeeButton mappings=[""="SmallCoffee"]
+                Switch item=CoffeeMachineBrewButton mappings=[""="Brew"]
+                Switch item=getCoffeeMachineStatus mappings=[ON="Get status"]
+                Text item=CoffeeMachineStatus
+                }
          }
+    Frame label="FaceDetector" {
+         Text label="Detections"  {
+                Group item=gFaceDetector
+         }     
     }
+}
 
 

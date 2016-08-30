@@ -8,6 +8,6 @@ Strategies {
  * item (excl. the group item itself).
  */
 Items {
-    gCoffeeMachine* : strategy = everyUpdate
+    gCoffeeMachineButtonsCapture* : strategy = everyUpdate
 }
 

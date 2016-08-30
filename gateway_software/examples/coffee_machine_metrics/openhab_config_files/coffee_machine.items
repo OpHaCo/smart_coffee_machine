@@ -1,19 +1,30 @@
 Group All
 Group gCoffeeMachine (All)
 Group gCoffeeMachineButtonsCapture (All)
+Group backgroundItems (All)
 
-Switch  CoffeeMachineSmallCoffeeButtonPress        "Small cup button press [%s]"                   (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee:state:default], >[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/smallCoffee:command:ON:0]" }
+Switch  CoffeeMachinePowerButtonPress                                                              (backgroundItems)                                            { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/power:command:ON:0]" }
+Number  OnCoffeeMachinePowerButtonPress            "[%s]"                                          (gCoffeeMachineButtonsCapture)                               { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/power:state:default]" }
+//displayed using sitemap switch
+String  CoffeeMachinePowerButton                   "Power button [%s]"                             (backgroundItems)  
 
-Switch  CoffeeMachineCoffeeButtonPress             "Coffee button press [%s]"                      (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/coffee:state:default], >[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/coffee:command:ON:0]" }
 
-Switch  CoffeeMachinePowerButtonPress              "Power button press [%s]"                       (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/power:state:default], >[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/power:command:ON:0]" }
+Switch  CoffeeMachineSmallCoffeeButtonPress                                                        (backgroundItems)                                            { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/smallCoffee:command:ON:0]" }
+Number  OnCoffeeMachineSmallCoffeeButtonPress      "[%s]"                                          (gCoffeeMachineButtonsCapture)                               { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/smallCoffee:state:default]"}
+//displayed using sitemap switch
+String  CoffeeMachineSmallCoffeeButton             "Small coffee button [%s]"                      (backgroundItems) 
 
-Number  CoffeeMachineBrewButtonPress               "On brew button press [%s]"                     (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/brew:state:default], >[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/brew:command:*:default]" }
+Switch  CoffeeMachineCoffeeButtonPress                                                             (backgroundItems)                                            { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/coffee:command:ON:0]" }
+Number  OnCoffeeMachineCoffeeButtonPress           "[%s]"                                          (gCoffeeMachineButtonsCapture)                               { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/coffee:state:default]"}
+//displayed using sitemap switch
+String  CoffeeMachineCoffeeButton                  "Coffee button [%s]"                            (backgroundItems) 
+
+Switch  CoffeeMachineBrewButtonPress                                                               (backgroundItems)                                            { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/brew:command:ON:0]" }
+Number  OnCoffeeMachineBrewButtonPress             "[%s]"                                          (gCoffeeMachineButtonsCapture)                               { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/on_button_press/brew:state:default]" }
+//displayed using sitemap switch
+String  CoffeeMachineBrewButton                    "Brew button [%s]"                              (backgroundItems) 
 
 Number  CoffeeMachineStatus                        "On saeco status [MAP(saeco_status.map):%s]"    (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/status:state:default]" }
 
-Switch  getCoffeeMachineStatus                     "get coffee machine status"                      (gCoffeeMachine, gCoffeeMachineButtonsCapture)             { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/getStatus:command:ON:0]" }
-
-
-
+Switch  getCoffeeMachineStatus                     "get coffee machine status"                     (gCoffeeMachine, gCoffeeMachineButtonsCapture)             { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/getStatus:command:ON:0]" }
 String setBrew "Configure brew" 

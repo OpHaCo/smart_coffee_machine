@@ -71,7 +71,7 @@
                 }
               ],
               "policy": "default",
-              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where $timeFilter",
+              "query": "select count(value) from OnCoffeeMachineSmallCoffeeButtonPress where $timeFilter",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -93,6 +93,7 @@
             }
           ],
           "thresholds": "5,15,30",
+          "timeFrom": "now/d",
           "timeShift": null,
           "title": "Small cup - today",
           "transparent": true,
@@ -105,8 +106,7 @@
               "value": "null"
             }
           ],
-          "valueName": "avg",
-          "timeFrom": "now/d"
+          "valueName": "avg"
         },
         {
           "aliasColors": {
@@ -162,7 +162,7 @@
               ],
               "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
-              "query": "select count(value) from CoffeeMachineSmallCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
+              "query": "select count(value) from OnCoffeeMachineSmallCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -307,7 +307,7 @@
                 }
               ],
               "policy": "default",
-              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where $timeFilter",
+              "query": "select count(value) from OnCoffeeMachineCoffeeButtonPress where $timeFilter",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -329,6 +329,7 @@
             }
           ],
           "thresholds": "5,15,30",
+          "timeFrom": "now/d",
           "title": "Big cup - today",
           "transparent": true,
           "type": "singlestat",
@@ -340,12 +341,12 @@
               "value": "null"
             }
           ],
-          "valueName": "avg",
-          "timeFrom": "now/d"
+          "valueName": "avg"
         },
         {
           "aliasColors": {
-            "CoffeeMachineCoffeeButtonPress.count": "#CCA300"
+            "CoffeeMachineCoffeeButtonPress.count": "#CCA300",
+            "OnCoffeeMachineCoffeeButtonPress.count": "#890F02"
           },
           "bars": false,
           "datasource": "creativity_lab_openhab",
@@ -396,7 +397,7 @@
               ],
               "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
-              "query": "select count(value) from CoffeeMachineCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
+              "query": "select count(value) from OnCoffeeMachineCoffeeButtonPress where $timeFilter GROUP BY time($interval)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -506,7 +507,7 @@
                 }
               ],
               "policy": "default",
-              "query": "select count(value) from CoffeeMachinePowerButtonPress where $timeFilter",
+              "query": "select count(value) from OnCoffeeMachinePowerButtonPress where $timeFilter",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -528,6 +529,7 @@
             }
           ],
           "thresholds": "5,15,30",
+          "timeFrom": "now/d",
           "title": "Power on/off - today",
           "transparent": true,
           "type": "singlestat",
@@ -539,13 +541,13 @@
               "value": "null"
             }
           ],
-          "valueName": "avg",
-          "timeFrom": "now/d"
+          "valueName": "avg"
         },
         {
           "aliasColors": {
             "CoffeeMachineCoffeeButtonPress.count": "#CCA300",
-            "CoffeeMachinePowerButtonPress.count": "#BF1B00"
+            "CoffeeMachinePowerButtonPress.count": "#BF1B00",
+            "OnCoffeeMachinePowerButtonPress.count": "#1F78C1"
           },
           "bars": false,
           "datasource": "creativity_lab_openhab",
@@ -596,7 +598,7 @@
               ],
               "measurement": "CoffeeMachineSmallCupButtonPress",
               "policy": "default",
-              "query": "select count(value) from CoffeeMachinePowerButtonPress where $timeFilter GROUP BY time($interval)",
+              "query": "select count(value) from OnCoffeeMachinePowerButtonPress where $timeFilter GROUP BY time($interval)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -650,13 +652,13 @@
           ]
         },
         {
-          "title": "Panel Title",
-          "error": false,
-          "span": 12,
           "editable": true,
-          "type": "pluginlist",
+          "error": false,
+          "id": 7,
           "isNew": true,
-          "id": 7
+          "span": 12,
+          "title": "Panel Title",
+          "type": "pluginlist"
         }
       ],
       "title": "Row"
@@ -707,6 +709,6 @@
   },
   "refresh": false,
   "schemaVersion": 12,
-  "version": 18,
+  "version": 20,
   "links": []
 }
