@@ -54,6 +54,7 @@ if isArmHw :
     from picamera import PiCamera
 
 from optparse import OptionParser
+from threading import Thread
 
 __all__ = []
 __version__ = 0.1
@@ -67,6 +68,11 @@ PROFILE = 0
 _trainingImages = []
 _labels = []
 _eigenModel = None
+_frame = []
+_frameCounter = 0
+_captureFace = [False]
+_subjectIds = {}
+_trainingFacesFolder = None
 
 class HaarObjectTracker():
     
@@ -200,6 +206,8 @@ class FaceTracker(HaarObjectTracker):
     
 
     def detect(self, childDetections):
+        global _captureFace
+
         detectedFaces = super().detect(childDetections)
         
         #only get biggest face
@@ -207,10 +215,26 @@ class FaceTracker(HaarObjectTracker):
         for (frame, x, y, w, h) in detectedFaces :
             if len(maxFace) == 0 or w*h > maxFace[0][3]*maxFace[0][4] :
                 maxFace = [(frame, x, y, w, h)]
-                #try to detect face from eigen vectors
-                foundLabel = _eigenModel.predict(cv2.resize(frame, (_trainingImages[0].shape[1], _trainingImages[0].shape[0]), interpolation = cv2.INTER_AREA))
-                print("Detected face label = {}".format(foundLabel))
+        
+        if len(maxFace) != 0 :
+            resizedFace = cv2.resize(frame, (_trainingImages[0].shape[1], _trainingImages[0].shape[0]), interpolation = cv2.INTER_AREA)
+            
+            if _captureFace[0] :
+                faceFolder = _trainingFolder + '/' + _captureFace[1] + '/'
+                if not os.path.exists(faceFolder):
+                    os.makedirs(faceFolder)
+                print("face must be captured")
+                nbImgs = len([name for name in os.listdir(faceFolder) if os.path.isfile(os.path.join(faceFolder, name))])
+                ret = cv2.imwrite(faceFolder + str(nbImgs+1) + ".pgm", resizedFace)
+                print("img write return {0}- nbImg = {1}".format(ret, nbImgs))
+                _captureFace[0] = False
 
+            #try to detect face from eigen vectors
+            foundLabel = _eigenModel.predict(resizedFace)
+            print("Detected face label = {} - subject id = {}".format(foundLabel, _subjectIds[foundLabel]))
+            cv2.imshow("frame resized", resizedFace)
+            cv2.imshow("found image", _trainingImages[_labels.index(foundLabel)]) 
+            
         return maxFace
         
     
@@ -282,6 +306,7 @@ class LowerFaceTracker(HaarObjectTracker):
 
 
 def handleFrame(frame, tracker, opts) :
+    global _captureFace
 
     if handleFrame.capturedFrames == 0 :
         handleFrame.start = time.time()
@@ -291,22 +316,28 @@ def handleFrame(frame, tracker, opts) :
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Adaptative histogram equalization
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
+    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    #gray = clahe.apply(gray)
         
 
     if handleFrame.fps != 0 :
         tracker.detectAndDraw(gray, gray, handleFrame.fps)
-    
+   
+    #keyboard actions on Video window
     if opts.video_stream :
         cv2.imshow('Video', gray)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-           return False 
+        key = cv2.waitKey(1)
+        
+        if key & 0xFF == ord('q'):
+            return False 
+        elif key & 0xFF == ord('c'):
+            print("Capture face...")
+            _captureFace = [True, "Juan"]
 
     if handleFrame.capturedFrames == 40 :
         handleFrame.fps = handleFrame.capturedFrames / (time.time() - handleFrame.start)
         handleFrame.capturedFrames = 0
-        print("fps = {}".format(handleFrame.fps))
+        print("(processed) fps = {}".format(handleFrame.fps))
         
     return True
 
@@ -315,26 +346,44 @@ handleFrame.fps = 0
 handleFrame.capturedFrames = 0
 handleFrame.start = 0
 
-def capture(tracker, opts):
+def captureThread(opts):
     try :
-            videoCapture = cv2.VideoCapture(int(opts.video_source))
-            videoCapture.grab()
+        if isArmHw :
+            rpiCapture(opts)
+
+        else :
+            capture(opts)
+    except KeyboardInterrupt as k:
+        print("Keyboard interrupt in capture thread")
+    
+    print("capture thread exit")
+
+
+def capture(opts):
+    global _frame
+    global _frameCounter
+
+    try :
+        videoCapture = cv2.VideoCapture(int(opts.video_source))
+        videoCapture.grab()
     
     except ValueError as e:
-          videoCapture = cv2.VideoCapture(opts.video_source)
+        videoCapture = cv2.VideoCapture(opts.video_source)
     
     while True :
-        ret, frame = videoCapture.read()    
+        ret, _frame = videoCapture.read()    
         if not ret:
             break
             
-        if not handleFrame(frame, tracker, opts):
-            break
+        _frameCounter += 1
             
     videoCapture.release()
 
 
-def rpiCapture(tracker, opts):
+def rpiCapture(opts):
+
+    global _frame
+    global _frameCounter
 
     # initialize the camera and grab a reference to the raw camera capture
     camera= PiCamera()
@@ -349,10 +398,9 @@ def rpiCapture(tracker, opts):
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True) :
 	# grab the raw NumPy array representing the image, then initialize the timestamp
 	# and occupied/unoccupied text
-        image = frame.array
-     
-        handleFrame(image, tracker, opts)	    		
- 
+        _frame = frame.array
+        _frameCounter += 1
+
 	# clear the stream in preparation for the next frame
         rawCapture.truncate(0)    
 
@@ -411,6 +459,10 @@ def train() :
     print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
 
 def openTrainingImages(imageFolder) :
+    global _trainingImages
+    global _labels
+    global _subjectIds
+
     if(not os.path.isdir(imageFolder)) :
         raise Exception("Invalid training image folder given.")
 
@@ -418,10 +470,12 @@ def openTrainingImages(imageFolder) :
     for dirname, dirnames, filenames in os.walk(imageFolder):
         for subdirname in dirnames:
             subject_path = os.path.join(dirname, subdirname)
+            subjectId = subject_path.split("/")[-1]
             for filename in os.listdir(subject_path):
                 abs_path = "%s/%s" % (subject_path, filename)
                 _trainingImages.append(cv2.imread(abs_path, 0))
                 _labels.append(label)
+            _subjectIds[label] = subjectId
             label = label + 1	
     if(len(_trainingImages) <= 1) :
         raise Exception("Not enough training images - at least 2 images must be given")              
@@ -431,6 +485,8 @@ def openTrainingImages(imageFolder) :
 
 
 def main(argv=None):
+    global _trainingFolder
+    
     '''Command line options.'''
     
     program_name = os.path.basename(sys.argv[0])
@@ -488,18 +544,33 @@ def main(argv=None):
         if opts.training_set_folder is None :
              raise Exception(program_usage)
          
-        openTrainingImages(opts.training_set_folder)    
+        if not os.path.isdir(opts.training_set_folder) :
+             raise Exception("given training folder do not exist")
+         
+        #remove trailing "/"
+        if opts.training_set_folder[-1] == "/" :
+            _trainingFolder = opts.training_set_folder[:-1]
+        else :
+            _trainingFolder = opts.training_set_folder 
+        openTrainingImages(_trainingFolder)    
         
         initTime = time.time()
         train()
         print("Training with {} images took {}ms".format(len(_trainingImages), (time.time() - initTime)*1000))
 
-        if isArmHw :
-            rpiCapture(smileTracker, opts)
-
-        else :
-            capture(smileTracker, opts)
+        # perform capture in a separate thread
+        captureTh = Thread(target=captureThread, args=(opts,)) 
+        captureTh.daemon = True 
+        captureTh.start()
         
+        currFrameIndex = 0 
+        while captureTh.isAlive :
+            if _frameCounter != currFrameIndex :
+                #print("Handle frame {0}".format(_frameCounter))
+                if not handleFrame(_frame, smileTracker, opts):
+                    break
+                currFrameIndex = _frameCounter
+
         cv2.destroyAllWindows()        
     
     except KeyboardInterrupt as k:
