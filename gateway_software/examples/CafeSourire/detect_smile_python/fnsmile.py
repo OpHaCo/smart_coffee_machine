@@ -65,14 +65,14 @@ DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
-_trainingImages = []
-_labels = []
-_eigenModel = None
 _frame = []
 _frameCounter = 0
-_captureFace = [False]
-_subjectIds = {}
 _trainingFacesFolder = None
+_mqttClient = None
+_faceTracker = None
+_smileTracker = None
+_lowerFaceTracker = None
+_stopThreads = False
 
 class HaarObjectTracker():
     
@@ -101,7 +101,7 @@ class HaarObjectTracker():
             childDetections = self.childTracker.detectAndDraw(frame, drawFrame, self.fps)
         
         else:
-            childDetections = [(frame, 0, 0, frame.shape[1], frame.shape[0])]
+            childDetections = [(frame, 0, 0, frame.shape[1], frame.shape[0], None)]
 
         return childDetections
     
@@ -109,8 +109,7 @@ class HaarObjectTracker():
     def detect(self, childDetections):
         
         retDetections = []
-           
-        for (pframe, px, py, pw, ph) in childDetections:
+        for (pframe, px, py, pw, ph, id) in childDetections:
             
             ownDetections = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
                                                      minNeighbors=self.minNeighbors,
@@ -121,14 +120,14 @@ class HaarObjectTracker():
                 #add detected rectangle
                 rframe = pframe[y:y+h, x:x+w]
                 # translate coordinate to correspond the the initial frame
-                retDetections.append((rframe, x+px, y+py, w, h))
+                retDetections.append((rframe, x+px, y+py, w, h, id))
 
         return retDetections
 
 
     def draw(self, detectedObjects, drawFrame):
         
-        for (frame, x, y, w, h) in detectedObjects:
+        for (frame, x, y, w, h, id) in detectedObjects:
             cv2.rectangle(drawFrame, (x, y), (x+w, y+h), self.color, 2)
             
     
@@ -138,19 +137,15 @@ class HaarObjectTracker():
         
 class SmileTracker(HaarObjectTracker):
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0):
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0, mqttClient=None):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
         
         #minimum smile duration
         self.MIN_SMILE_DUR = 500
         #currentsmile duration in ms
         self.smileDuration = 0
-        self.mqttClient = mqtt.Client()
-        self.mqttClient.on_connect = self.onMQTTConnect
-        self.mqttClient.on_message = self.onMQTTMessage
-        self.mqttClient.connect("192.168.132.100", 1883, 60)
-        self.mqttClient.loop_start()
         self.smileOnGoing = False 
+        self.mqttClient = mqttClient
 
     def detect(self, childDetections ):
         
@@ -162,8 +157,6 @@ class SmileTracker(HaarObjectTracker):
             faceSize = childDetections[0][3]*childDetections[0][4]
             #criterion over number of detected smiles : depends on face size    
             haarCascadeCrit = faceSize*0.0045
-        
-        if len(childDetections) > 0 :
             print("number of raw smile  / criterion : {} / {}".format(len(rawDetectedSmiles), haarCascadeCrit))
 
         if len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
@@ -173,12 +166,16 @@ class SmileTracker(HaarObjectTracker):
                 if(not self.smileOnGoing) :
                     self.smileOnGoing = True
                     print("smile detected")
-                    self.mqttClient.publish("/CafeSourire/smile", "1")
+                    if self.mqttClient is not None :
+                        self.mqttClient.publish("/CafeSourire/smile", rawDetectedSmiles[0][5])
             
-                #mean for found smile               
+                #mean for found smile
+                #remove first column (frame) 
                 rects = numpy.delete(rawDetectedSmiles, 0, 1)
+                #remove last column (id)
+                rects = numpy.delete(rects, -1, 1)
                 rects = numpy.mean(rects, axis = 0)
-                detectedSmiles = [(rawDetectedSmiles[0][0], int(rects[0]), int(rects[1]), int(rects[2]), int(rects[3]))]
+                detectedSmiles = [(rawDetectedSmiles[0][0], int(rects[0]), int(rects[1]), int(rects[2]), int(rects[3]), rawDetectedSmiles[0][5])]
         else:
             if self.smileOnGoing :
                 print("smile duration was {}".format(self.smileDuration))
@@ -188,67 +185,141 @@ class SmileTracker(HaarObjectTracker):
         return detectedSmiles
     
     
-    def onMQTTConnect(self, client, userdata, flags, rc):
-        print("Connected to MQTT broker with result code "+str(rc))
-            
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
-        #client.subscribe("#")
-
-    def onMQTTMessage(userdataMess, msg) :
-        print(msg.topic + " " + str(msg.payload))
-        
-
 class FaceTracker(HaarObjectTracker):
     
     def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
-    
+        self.captureFace = [False, ""]
+        self.eigenModel = None
+        self.trainingImages = []
+        self.labels = []
+        self.subjectIds = {}        
+        
+        if self.loadTrainingImgs(_trainingFolder) :
+            initTime = time.time()
+            self.train()
+            print("Training with {} images took {}ms".format(len(self.trainingImages), (time.time() - initTime)*1000))
+        
+        else :
+            print("No face detection available")
 
     def detect(self, childDetections):
-        global _captureFace
 
         detectedFaces = super().detect(childDetections)
         
         #only get biggest face
         maxFace = [] 
-        for (frame, x, y, w, h) in detectedFaces :
+        for (frame, x, y, w, h, id) in detectedFaces :
             if len(maxFace) == 0 or w*h > maxFace[0][3]*maxFace[0][4] :
                 maxFace = [(frame, x, y, w, h)]
-        
+         
         if len(maxFace) != 0 :
-            resizedFace = cv2.resize(frame, (_trainingImages[0].shape[1], _trainingImages[0].shape[0]), interpolation = cv2.INTER_AREA)
+            resizedFace = cv2.resize(frame, (92, 112), interpolation = cv2.INTER_AREA)
             
-            if _captureFace[0] :
-                faceFolder = _trainingFolder + '/' + _captureFace[1] + '/'
+            #Append id to frame - id = name of detected face
+            maxFace[0] = maxFace[0] + (self.recognizeFace(resizedFace),) 
+
+            if self.captureFace[0] :
+                faceFolder = _trainingFolder + '/' + self.captureFace[1] + '/'
                 if not os.path.exists(faceFolder):
                     os.makedirs(faceFolder)
-                print("face must be captured")
                 nbImgs = len([name for name in os.listdir(faceFolder) if os.path.isfile(os.path.join(faceFolder, name))])
                 ret = cv2.imwrite(faceFolder + str(nbImgs+1) + ".pgm", resizedFace)
-                print("img write return {0}- nbImg = {1}".format(ret, nbImgs))
-                _captureFace[0] = False
+                if ret :
+                    print("Face of {0} has been captured - training set for {1} = {2}".format(self.captureFace[1], self.captureFace[1], nbImgs+1))
+                self.captureFace[0] = False
+                 
+        
+        return maxFace 
+        
+    def captureFaceAsync(self, faceName):
+        self.captureFace = [True, faceName]
 
+    def loadTrainingImgs(self, imageFolder):
+
+        if(not os.path.isdir(imageFolder)) :
+            raise Exception("Invalid training image folder given.")
+
+        label = 0
+        for dirname, dirnames, filenames in os.walk(imageFolder):
+            for subdirname in dirnames:
+                subject_path = os.path.join(dirname, subdirname)
+                subjectId = subject_path.split("/")[-1]
+                for filename in os.listdir(subject_path):
+                    abs_path = "%s/%s" % (subject_path, filename)
+                    self.trainingImages.append(cv2.imread(abs_path, 0))
+                    self.labels.append(label)
+                self.subjectIds[label] = subjectId
+                label = label + 1	
+        if(len(self.trainingImages) <= 1) :
+            print("Not enough training images - at least 2 images must be given")              
+            return False
+        else :
+            print("{} images have been read".format(len(self.trainingImages)))            
+            return True
+
+    def train(self):
+        
+        #Get the height from the first image. We'll need this
+        # later in code to reshape the images to their original
+        # size:
+        height = len(self.trainingImages[0])
+        print("training image height = {}".format(height))
+        # The following lines simply get the last images from
+        # your dataset and remove it from the vector. This is
+        # done, so that the training data (which we learn the
+        # cv::BasicFaceRecognizer on) and the test data we test
+        # the model with, do not overlap.
+        testImage = self.trainingImages[len(self.trainingImages) - 1]
+        testLabel = self.labels[len(self.labels) - 1]
+        self.trainingImages.pop();
+        self.labels.pop();
+        # The following lines create an Eigenfaces model for
+        # face recognition and train it with the images and
+        # labels read from training images.
+        # This here is a full PCA, if you just want to keep
+        # 10 principal components (read Eigenfaces), then call
+        # the factory method like this:
+        #
+        #      cv::createEigenFaceRecognizer(10);
+        #
+        # If you want to create a FaceRecognizer with a
+        # confidence threshold (e.g. 123.0), call it with:
+        #
+        #      cv::createEigenFaceRecognizer(10, 123.0);
+        #
+        # If you want to use _all_ Eigenfaces and have a threshold,
+        # then call the method like this:
+        #
+        #      cv::createEigenFaceRecognizer(0, 123.0);
+        #
+        self.eigenModel = cv2.face.createEigenFaceRecognizer()
+        self.eigenModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
+        
+        #for testing
+        initTime = time.time()
+        predictedLabel = self.eigenModel.predict(testImage);
+        print("Prediction took {}ms".format((time.time() - initTime)*1000))
+        # 
+        # To get the confidence of a prediction call the model with:
+        #
+        #      int predictedLabel = -1;
+        #      double confidence = 0.0;
+        #      model->predict(testSample, predictedLabel, confidence);
+        #
+        print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
+
+    def recognizeFace(self, face) : 
+        if self.eigenModel is not None :
             #try to detect face from eigen vectors
-            foundLabel = _eigenModel.predict(resizedFace)
-            print("Detected face label = {} - subject id = {}".format(foundLabel, _subjectIds[foundLabel]))
-            cv2.imshow("frame resized", resizedFace)
-            cv2.imshow("found image", _trainingImages[_labels.index(foundLabel)]) 
-            
-        return maxFace
+            foundLabel = self.eigenModel.predict(face)
+            print("Detected face label = {} - subject id = {}".format(foundLabel, self.subjectIds[foundLabel]))
+            cv2.imshow("frame resized", face)
+            cv2.imshow("found image", self.trainingImages[self.labels.index(foundLabel)]) 
         
-    
-    def loadTrainingImgs():
-        print("TODO")
-        
-
-    def train():
-        print("TODO")
-        
-
-    def recognizeFace() :    
-        print("TODO")
-	
+            return self.subjectIds[foundLabel]
+        else :
+            return "" 
     
 class LowerFaceTracker(HaarObjectTracker):
     
@@ -304,9 +375,36 @@ class LowerFaceTracker(HaarObjectTracker):
             
         return retDetections
 
+def connectMQTT() :
+    global _mqttClient 
+    
+    try :
+        _mqttClient = mqtt.Client()
+        _mqttClient.on_connect = onMQTTConnect
+        _mqttClient.on_message = onMQTTMessage
+        _mqttClient.connect("192.168.132.100", 1883, 2)
+        _mqttClient.loop_start()
+    
+    except Exception as e :
+        print("Cannot connect MQTT server - " + str(e))
+        _mqttClient.loop_stop()
+        _mqttClient = None
+
+def onMQTTConnect(client, userdata, flags, rc):
+    print("Connected to MQTT broker with result code "+str(rc))
+        
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+    client.subscribe("/smile_tracker/capture")
+
+def onMQTTMessage(client, userdataMess, msg) :
+    print("Client received message "  + msg.payload.decode("ascii") + " on topic " + msg.topic)
+    
+    if _faceTracker is not None :
+        print("Capture a frame for " + msg.payload.decode("ascii"))
+        _faceTracker.captureFaceAsync(msg.payload.decode("ascii"))
 
 def handleFrame(frame, tracker, opts) :
-    global _captureFace
 
     if handleFrame.capturedFrames == 0 :
         handleFrame.start = time.time()
@@ -316,8 +414,8 @@ def handleFrame(frame, tracker, opts) :
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Adaptative histogram equalization
-    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    #gray = clahe.apply(gray)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    gray = clahe.apply(gray)
         
 
     if handleFrame.fps != 0 :
@@ -332,7 +430,7 @@ def handleFrame(frame, tracker, opts) :
             return False 
         elif key & 0xFF == ord('c'):
             print("Capture face...")
-            _captureFace = [True, "Juan"]
+            _faceTracker.captureFaceAsync("Pedro")
 
     if handleFrame.capturedFrames == 40 :
         handleFrame.fps = handleFrame.capturedFrames / (time.time() - handleFrame.start)
@@ -353,10 +451,12 @@ def captureThread(opts):
 
         else :
             capture(opts)
+    
     except KeyboardInterrupt as k:
         print("Keyboard interrupt in capture thread")
     
-    print("capture thread exit")
+    finally :
+        print("Capture thread exit")
 
 
 def capture(opts):
@@ -370,7 +470,7 @@ def capture(opts):
     except ValueError as e:
         videoCapture = cv2.VideoCapture(opts.video_source)
     
-    while True :
+    while not _stopThreads :
         ret, _frame = videoCapture.read()    
         if not ret:
             break
@@ -403,89 +503,18 @@ def rpiCapture(opts):
 
 	# clear the stream in preparation for the next frame
         rawCapture.truncate(0)    
-
-def train() :
-    global _eigenModel
-    global _trainingImages
-    global _labels
-    
-    #Get the height from the first image. We'll need this
-    # later in code to reshape the images to their original
-    # size:
-    height = len(_trainingImages[0])
-    print("training image height = {}".format(height))
-    # The following lines simply get the last images from
-    # your dataset and remove it from the vector. This is
-    # done, so that the training data (which we learn the
-    # cv::BasicFaceRecognizer on) and the test data we test
-    # the model with, do not overlap.
-    testImage = _trainingImages[len(_trainingImages) - 1]
-    testLabel = _labels[len(_labels) - 1]
-    _trainingImages.pop();
-    _labels.pop();
-    # The following lines create an Eigenfaces model for
-    # face recognition and train it with the images and
-    # labels read from training images.
-    # This here is a full PCA, if you just want to keep
-    # 10 principal components (read Eigenfaces), then call
-    # the factory method like this:
-    #
-    #      cv::createEigenFaceRecognizer(10);
-    #
-    # If you want to create a FaceRecognizer with a
-    # confidence threshold (e.g. 123.0), call it with:
-    #
-    #      cv::createEigenFaceRecognizer(10, 123.0);
-    #
-    # If you want to use _all_ Eigenfaces and have a threshold,
-    # then call the method like this:
-    #
-    #      cv::createEigenFaceRecognizer(0, 123.0);
-    #
-    _eigenModel = cv2.face.createEigenFaceRecognizer()
-    _eigenModel.train(numpy.asarray(_trainingImages), numpy.asarray(_labels))  
-    
-    #for testing
-    initTime = time.time()
-    predictedLabel = _eigenModel.predict(testImage);
-    print("Prediction took {}ms".format((time.time() - initTime)*1000))
-    # 
-    # To get the confidence of a prediction call the model with:
-    #
-    #      int predictedLabel = -1;
-    #      double confidence = 0.0;
-    #      model->predict(testSample, predictedLabel, confidence);
-    #
-    print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
-
-def openTrainingImages(imageFolder) :
-    global _trainingImages
-    global _labels
-    global _subjectIds
-
-    if(not os.path.isdir(imageFolder)) :
-        raise Exception("Invalid training image folder given.")
-
-    label = 0
-    for dirname, dirnames, filenames in os.walk(imageFolder):
-        for subdirname in dirnames:
-            subject_path = os.path.join(dirname, subdirname)
-            subjectId = subject_path.split("/")[-1]
-            for filename in os.listdir(subject_path):
-                abs_path = "%s/%s" % (subject_path, filename)
-                _trainingImages.append(cv2.imread(abs_path, 0))
-                _labels.append(label)
-            _subjectIds[label] = subjectId
-            label = label + 1	
-    if(len(_trainingImages) <= 1) :
-        raise Exception("Not enough training images - at least 2 images must be given")              
-    else :
-        print("{} images have been read".format(len(_trainingImages)))            
-     
+        
+        if _stopThreads :
+            return
 
 
 def main(argv=None):
     global _trainingFolder
+    global _faceTracker
+    global _smileTracker
+    global _lowerFaceTracker
+    global _stopThreads
+    captureTh = None
     
     '''Command line options.'''
     
@@ -522,25 +551,6 @@ def main(argv=None):
 
         (opts, args) = parser.parse_args(argv)
         
-        if opts.smile_model is None:
-            raise Exception(program_usage)
-        
-        if opts.nose_model is not None and opts.face_model is None:
-            raise Exception("Error: a nose detector also requires a face model")
-        
-        
-        if opts.face_model is not None:
-            faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
-            
-            if opts.nose_model is not None:
-                lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = faceTracker, id="nose-tracker", minNeighbors = 10)
-                smileTracker = SmileTracker(opts.smile_model, lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1)
-            else:
-                smileTracker = SmileTracker(opts.smile_model, faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
-            
-        else:
-            smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1)
-            
         if opts.training_set_folder is None :
              raise Exception(program_usage)
          
@@ -552,11 +562,26 @@ def main(argv=None):
             _trainingFolder = opts.training_set_folder[:-1]
         else :
             _trainingFolder = opts.training_set_folder 
-        openTrainingImages(_trainingFolder)    
+            
+        if opts.smile_model is None:
+            raise Exception(program_usage)
         
-        initTime = time.time()
-        train()
-        print("Training with {} images took {}ms".format(len(_trainingImages), (time.time() - initTime)*1000))
+        if opts.nose_model is not None and opts.face_model is None:
+            raise Exception("Error: a nose detector also requires a face model")
+        
+        connectMQTT()        
+        
+        if opts.face_model is not None:
+            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
+            
+            if opts.nose_model is not None:
+                _lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = _faceTracker, id="nose-tracker", minNeighbors = 10)
+                _smileTracker = SmileTracker(opts.smile_model, _lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
+            else:
+                _smileTracker = SmileTracker(opts.smile_model, _faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
+            
+        else:
+            _smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
 
         # perform capture in a separate thread
         captureTh = Thread(target=captureThread, args=(opts,)) 
@@ -567,23 +592,28 @@ def main(argv=None):
         while captureTh.isAlive :
             if _frameCounter != currFrameIndex :
                 #print("Handle frame {0}".format(_frameCounter))
-                if not handleFrame(_frame, smileTracker, opts):
+                if not handleFrame(_frame, _smileTracker, opts):
                     break
                 currFrameIndex = _frameCounter
-
-        cv2.destroyAllWindows()        
     
     except KeyboardInterrupt as k:
         sys.stderr.write("program will exit\nBye!\n")
         return 0
        
     except Exception as e:
-        sys.stderr.write(str(e) + "\n")
+        sys.stderr.write("Exception in main thread : " + str(e) + "\n")
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
         return 2
 
+    finally :
+        _stopThreads = True
+        if captureTh is not None :
+            while captureTh.isAlive() :
+                time.sleep(0.01)
+        
+        cv2.destroyAllWindows()        
 
 if __name__ == "__main__":
     if DEBUG:
