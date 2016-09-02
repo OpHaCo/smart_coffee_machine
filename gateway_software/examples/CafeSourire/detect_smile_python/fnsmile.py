@@ -293,13 +293,14 @@ class FaceTracker(HaarObjectTracker):
         #
         #      cv::createEigenFaceRecognizer(0, 123.0);
         #
-        self.eigenModel = cv2.face.createEigenFaceRecognizer()
+        # Cannot set threshold : https://github.com/opencv/opencv_contrib/issues/512
+        self.eigenModel = cv2.face.createEigenFaceRecognizer(threshold=3000)
         self.eigenModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
         
         #for testing
-        initTime = time.time()
-        predictedLabel = self.eigenModel.predict(testImage);
-        print("Prediction took {}ms".format((time.time() - initTime)*1000))
+        #initTime = time.time()
+        #predictedLabel, confidence = self.eigenModel.predict(testImage);
+        #print("Prediction took {}ms - confidence = {}".format((time.time() - initTime)*1000, confidence))
         # 
         # To get the confidence of a prediction call the model with:
         #
@@ -307,19 +308,28 @@ class FaceTracker(HaarObjectTracker):
         #      double confidence = 0.0;
         #      model->predict(testSample, predictedLabel, confidence);
         #
-        print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
+        #print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
 
     def recognizeFace(self, face) : 
         if self.eigenModel is not None :
             #try to detect face from eigen vectors
-            foundLabel = self.eigenModel.predict(face)
-            print("Detected face label = {} - subject id = {}".format(foundLabel, self.subjectIds[foundLabel]))
-            cv2.imshow("frame resized", face)
-            cv2.imshow("found image", self.trainingImages[self.labels.index(foundLabel)]) 
-        
-            return self.subjectIds[foundLabel]
+            # confidence no more accessible when using python 3.5 and and opencv 3.1.0 
+            # https://github.com/opencv/opencv_contrib/issues/512
+            # Solution (archlinux) : install opencv-git and modify PKGBUILD to add
+            # opencv_contrib (add source and compilation flag)
+            foundLabel, confidence = self.eigenModel.predict(face)
+            
+            if foundLabel == -1 :
+                print("Unable to recognize any face")
+                return "NA"
+            else :
+                print("Detected face label = {} , confidence = {} - subject id = {}".format(foundLabel, confidence, self.subjectIds[foundLabel]))
+                cv2.imshow("frame resized", face)
+                cv2.imshow("found image", self.trainingImages[self.labels.index(foundLabel)]) 
+            
+                return self.subjectIds[foundLabel]
         else :
-            return "" 
+            return "NA" 
     
 class LowerFaceTracker(HaarObjectTracker):
     
@@ -382,7 +392,8 @@ def connectMQTT() :
         _mqttClient = mqtt.Client()
         _mqttClient.on_connect = onMQTTConnect
         _mqttClient.on_message = onMQTTMessage
-        _mqttClient.connect("192.168.132.100", 1883, 2)
+        _mqttClient.connect_async("192.168.132.100", 1883, 60) 
+        
         _mqttClient.loop_start()
     
     except Exception as e :
@@ -416,7 +427,6 @@ def handleFrame(frame, tracker, opts) :
     # Adaptative histogram equalization
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     gray = clahe.apply(gray)
-        
 
     if handleFrame.fps != 0 :
         tracker.detectAndDraw(gray, gray, handleFrame.fps)
