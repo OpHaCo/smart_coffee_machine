@@ -1,0 +1,16 @@
+[Unit]
+Description=Smile detection service
+Requires=openhab.service
+After=openhab.service                                    
+
+[Service]
+# Note: setting PYTHONUNBUFFERED is necessary to see the output of this service in the journal
+# See https://docs.python.org/2/using/cmdline.html#envvar-PYTHONUNBUFFERED
+Environment=PYTHONUNBUFFERED=true
+User=remi
+WorkingDirectory=/home/remi/projects/smart_coffee_machine/gateway_software/examples/CafeSourire/
+ExecStart=/usr/bin/python ./detect_smile.py -f ./haarcascade/haarcascade_frontalface_default.xml -s ./haarcascade/haarcascade_smile.xml -t ./training_set/ 
+
+
+[Install]
+WantedBy=multi-user.target
