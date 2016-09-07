@@ -1,6 +1,29 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
 '''
+ @file    bundle_container.h
+ @author  Rémi Pincent - INRIA
+ @date    26 févr. 2014
+
+ @brief Detect smile from video capture. Also detects smiling subject.
+ Results send over MQTT. 
+ Project : smart_coffee_machine
+ Contact:  Rémi Pincent - remi.pincent@inria.fr
+ 
+ Revision History:
+ https://github.com/OpHaCo/smart_coffee_machine.git 
+  
+  LICENSE :
+  smart_coffee_machine (c) by Rémi Pincent
+  smart_coffee_machine is licensed under a
+  Creative Commons Attribution-NonCommercial 3.0 Unported License.
+ 
+  You should have received a copy of the license along with this
+  work.  If not, see <http://creativecommons.org/licenses/by-nc/3.0/>.
+
+This file has been modified from : 
+
 track--smile -- reads video stream from a capture device an d tracks smile.
 
 
@@ -65,6 +88,10 @@ DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
+# constants
+MQTT_BROKER_ADD = "192.168.132.100"
+CAPTURE_RES     = (480, 368)
+
 _frame = []
 _frameCounter = 0
 _trainingFacesFolder = None
@@ -73,6 +100,7 @@ _faceTracker = None
 _smileTracker = None
 _lowerFaceTracker = None
 _stopThreads = False
+
 
 class HaarObjectTracker():
     
@@ -216,7 +244,6 @@ class FaceTracker(HaarObjectTracker):
          
         if len(maxFace) != 0 :
             resizedFace = cv2.resize(frame, (150, 175), interpolation = cv2.INTER_AREA)
-            #maxFace[0] = (resizedFace, maxFace[0][1], maxFace[0][2], maxFace[0][3], maxFace[0][4])
 
             #Append id to frame - id = name of detected face
             maxFace[0] = maxFace[0] + (self.recognizeFace(resizedFace),) 
@@ -394,7 +421,7 @@ def connectMQTT() :
         _mqttClient = mqtt.Client()
         _mqttClient.on_connect = onMQTTConnect
         _mqttClient.on_message = onMQTTMessage
-        _mqttClient.connect_async("192.168.132.100", 1883, 60) 
+        _mqttClient.connect_async(MQTT_BROKER_ADD, 1883, 60) 
         
         _mqttClient.loop_start()
     
@@ -487,6 +514,8 @@ def capture(opts):
         if not ret:
             break
             
+        if(_frameCounter == 0) :
+            print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
         _frameCounter += 1
             
     videoCapture.release()
@@ -499,9 +528,9 @@ def rpiCapture(opts):
 
     # initialize the camera and grab a reference to the raw camera capture
     camera= PiCamera()
-    camera.resolution = (480, 368)
+    camera.resolution = CAPTURE_RES 
     camera.framerate = 32
-    rawCapture = PiRGBArray(camera, size=(480, 368))
+    rawCapture = PiRGBArray(camera, size=CAPTURE_RES)
     
     # allow the camera to warmup
     time.sleep(0.1)
@@ -511,6 +540,8 @@ def rpiCapture(opts):
 	# grab the raw NumPy array representing the image, then initialize the timestamp
 	# and occupied/unoccupied text
         _frame = frame.array
+        if(_frameCounter == 0) :
+            print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
         _frameCounter += 1
 
 	# clear the stream in preparation for the next frame
