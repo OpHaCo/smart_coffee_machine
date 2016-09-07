@@ -1,0 +1,66 @@
+ import java.util.Date
+ import java.text.SimpleDateFormat
+
+rule powerButtonPressRule
+when Item CoffeeMachinePowerButton received command
+then
+	sendCommand(CoffeeMachinePowerButtonPress , ON)
+end
+
+rule onPowerButtonPressRule
+when Item OnCoffeeMachinePowerButtonPress received update
+then
+	var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
+    var String Timestamp = df.format( new Date() )
+	postUpdate(CoffeeMachinePowerButton, "Last pressed " + Timestamp + " during " + OnCoffeeMachinePowerButtonPress.state.toString() + "ms")
+end
+
+rule smallCoffeeButtonPressRule
+when Item CoffeeMachineSmallCoffeeButton received command
+then
+	sendCommand(CoffeeMachineSmallCoffeeButtonPress , ON)
+end
+
+rule onSmallCoffeeButtonPressRule
+when Item OnCoffeeMachineSmallCoffeeButtonPress received update
+then
+	var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
+    var String Timestamp = df.format( new Date() )
+	postUpdate(CoffeeMachineSmallCoffeeButton, "Last pressed " + Timestamp + " during " + OnCoffeeMachineSmallCoffeeButtonPress.state.toString() + "ms")
+end
+
+rule coffeeButtonPressRule
+when Item CoffeeMachineCoffeeButton received command
+then
+	sendCommand(CoffeeMachineCoffeeButtonPress , ON)
+end
+
+rule onCoffeeButtonPressRule
+when Item OnCoffeeMachineCoffeeButtonPress received update
+then
+	var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
+    var String Timestamp = df.format( new Date() )
+	postUpdate(CoffeeMachineCoffeeButton, "Last pressed " + Timestamp + " during " + OnCoffeeMachineCoffeeButtonPress.state.toString() + "ms")
+end
+
+rule brewButtonPressRule
+when Item CoffeeMachineBrewButton received command
+then
+	sendCommand(CoffeeMachineBrewButtonPress , ON)
+end
+
+rule onBrewButtonPressRule
+when Item OnCoffeeMachineBrewButtonPress received update
+then
+	var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
+    var String Timestamp = df.format( new Date() )
+	postUpdate(CoffeeMachineBrewButton, "Last pressed " + Timestamp + " during " + OnCoffeeMachineBrewButtonPress.state.toString() + "ms")
+end
+
+rule testRule
+when Item testItem received update
+then
+	logInfo("rules", "testRule - begin")
+	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_coucou.sh remi", 1000000))
+	logInfo("rules", "testRule - end")
+end
