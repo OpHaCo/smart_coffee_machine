@@ -504,6 +504,8 @@ def capture(opts):
 
     try :
         videoCapture = cv2.VideoCapture(int(opts.video_source))
+        videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_RES[0]) 
+        videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_RES[1]) 
         videoCapture.grab()
     
     except ValueError as e:
