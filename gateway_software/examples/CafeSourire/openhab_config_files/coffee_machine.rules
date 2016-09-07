@@ -1,11 +1,26 @@
  import java.util.Date
  import java.text.SimpleDateFormat
 
+var String currState = "0"
+var String lastState = "0"
+
 rule powerButtonPressRule
 when Item CoffeeMachinePowerButton received command
 then
 	sendCommand(CoffeeMachinePowerButtonPress , ON)
 end
+
+rule onStateUpdate
+when Item CoffeeMachineStatus received update
+then
+	if(lastState == "0" && CoffeeMachineStatus.state.toString() != "0")
+	{
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
+	}
+	lastState = currState
+	currState = CoffeeMachineStatus.state.toString()
+	
+end	
 
 rule onPowerButtonPressRule
 when Item OnCoffeeMachinePowerButtonPress received update
@@ -61,6 +76,6 @@ rule testRule
 when Item testItem received update
 then
 	logInfo("rules", "testRule - begin")
-	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_coucou.sh remi", 1000000))
+	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
 	logInfo("rules", "testRule - end")
 end
