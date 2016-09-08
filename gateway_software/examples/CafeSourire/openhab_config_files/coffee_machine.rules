@@ -17,6 +17,10 @@ then
 	{
 		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
 	}
+	else if(lastState != "0" && CoffeeMachineStatus.state.toString() == "0")
+	{
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_off.wav", 1000000))
+	}
 	lastState = currState
 	currState = CoffeeMachineStatus.state.toString()
 	
