@@ -2,9 +2,9 @@
 # encoding: utf-8
 
 '''
- @file    bundle_container.h
+ @file    detect_smile.py 
  @author  Rémi Pincent - INRIA
- @date    26 févr. 2014
+ @date    10/07/2016
 
  @brief Detect smile from video capture. Also detects smiling subject.
  Results send over MQTT. 
@@ -142,7 +142,7 @@ class HaarObjectTracker():
             ownDetections = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
                                                      minNeighbors=self.minNeighbors,
                                                      minSize=(30, 30),
-                                                     flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING)
+                                                     flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING | cv2.CASCADE_FIND_BIGGEST_OBJECT)
             for(x, y, w, h) in ownDetections :    
                
                 #add detected rectangle
@@ -216,13 +216,14 @@ class SmileTracker(HaarObjectTracker):
     
 class FaceTracker(HaarObjectTracker):
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0):
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0, recModel="LBPH"):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
         self.captureFace = [False, ""]
-        self.eigenModel = None
+        self.faceRecModel = None
         self.trainingImages = []
         self.labels = []
         self.subjectIds = {}        
+        self.recModel=recModel
         
         if self.loadTrainingImgs(_trainingFolder) :
             initTime = time.time()
@@ -294,59 +295,66 @@ class FaceTracker(HaarObjectTracker):
         # size:
         height = len(self.trainingImages[0])
         print("training image height = {}".format(height))
-        # The following lines simply get the last images from
-        # your dataset and remove it from the vector. This is
-        # done, so that the training data (which we learn the
-        # cv::BasicFaceRecognizer on) and the test data we test
-        # the model with, do not overlap.
-        testImage = self.trainingImages[len(self.trainingImages) - 1]
-        testLabel = self.labels[len(self.labels) - 1]
         self.trainingImages.pop();
         self.labels.pop();
-        # The following lines create an Eigenfaces model for
-        # face recognition and train it with the images and
-        # labels read from training images.
-        # This here is a full PCA, if you just want to keep
-        # 10 principal components (read Eigenfaces), then call
-        # the factory method like this:
-        #
-        #      cv::createEigenFaceRecognizer(10);
-        #
-        # If you want to create a FaceRecognizer with a
-        # confidence threshold (e.g. 123.0), call it with:
-        #
-        #      cv::createEigenFaceRecognizer(10, 123.0);
-        #
-        # If you want to use _all_ Eigenfaces and have a threshold,
-        # then call the method like this:
-        #
-        #      cv::createEigenFaceRecognizer(0, 123.0);
-        #
-        # Cannot set threshold : https://github.com/opencv/opencv_contrib/issues/512
-        self.eigenModel = cv2.face.createEigenFaceRecognizer(threshold=2000)
-        self.eigenModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
+
+        print("Face rec model is {}".format(self.recModel))
+        if self.recModel == "PCA" :
+            # The following lines create an Eigenfaces model for
+            # face recognition and train it with the images and
+            # labels read from training images.
+            # This here is a full PCA, if you just want to keep
+            # 10 principal components (read Eigenfaces), then call
+            # the factory method like this:
+            #
+            #      cv::createEigenFaceRecognizer(10);
+            #
+            # If you want to create a FaceRecognizer with a
+            # confidence threshold (e.g. 123.0), call it with:
+            #
+            #      cv::createEigenFaceRecognizer(10, 123.0);
+            #
+            # If you want to use _all_ Eigenfaces and have a threshold,
+            # then call the method like this:
+            #
+            #      cv::createEigenFaceRecognizer(0, 123.0);
+            #
+            # Cannot set threshold : https://github.com/opencv/opencv_contrib/issues/512
+            self.faceRecModel = cv2.face.createEigenFaceRecognizer(threshold=2000)
         
-        #for testing
-        #initTime = time.time()
-        #predictedLabel, confidence = self.eigenModel.predict(testImage);
-        #print("Prediction took {}ms - confidence = {}".format((time.time() - initTime)*1000, confidence))
-        # 
-        # To get the confidence of a prediction call the model with:
-        #
-        #      int predictedLabel = -1;
-        #      double confidence = 0.0;
-        #      model->predict(testSample, predictedLabel, confidence);
-        #
-        #print("Predicted class = {} / Actual class = {}.".format(predictedLabel, testLabel)) 
+        else : #LBPH    
+	    # The following lines create an LBPH model for
+	    # face recognition and train it with the images and
+	    # labels read from the given CSV file.
+	    #
+	    # The LBPHFaceRecognizer uses Extended Local Binary Patterns
+	    # (it's probably configurable with other operators at a later
+	    # point), and has the following default values
+	    #
+	    #      radius = 1
+	    #      neighbors = 8
+	    #      grid_x = 8
+	    #      grid_y = 8
+	    #
+	    # So if you want a LBPH FaceRecognizer using a radius of
+	    # 2 and 16 neighbors, call the factory method with:
+	    #
+	    #      cv::createLBPHFaceRecognizer(2, 16);
+	    #
+	    # And if you want a threshold (e.g. 123.0) call it with its default values:
+            # cv::createLBPHFaceRecognizer(1,8,8,8,123.0)
+            self.faceRecModel = cv2.face.createLBPHFaceRecognizer(threshold=80)
+
+        self.faceRecModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
 
     def recognizeFace(self, face) : 
-        if self.eigenModel is not None :
+        if self.faceRecModel is not None :
             #try to detect face from eigen vectors
             # confidence no more accessible when using python 3.5 and and opencv 3.1.0 
             # https://github.com/opencv/opencv_contrib/issues/512
             # Solution (archlinux) : install opencv-git and modify PKGBUILD to add
             # opencv_contrib (add source and compilation flag)
-            foundLabel, confidence = self.eigenModel.predict(face)
+            foundLabel, confidence = self.faceRecModel.predict(face)
             
             if foundLabel == -1 :
                 print("Unable to recognize any face")
@@ -593,7 +601,7 @@ def main(argv=None):
         parser.add_option("-v", "--video-source", dest="video_source", default="0", help="If an integer, try reading from the webcam, else open video file", metavar="INT/FILE")
         parser.add_option("-a", "--video-stream", action="store_true", dest="video_stream", default=False, help="Show video stream with detected objects (optional)")
         parser.add_option("-t", "--training-set", dest="training_set_folder", default=None, help="Face training set folder(mandatory)")
-
+        parser.add_option("-m", "--rec-model", dest="rec_model", default="LBPH", help="Face recognizing model : PCA or LBPH")
         (opts, args) = parser.parse_args(argv)
         
         if opts.training_set_folder is None :
@@ -601,6 +609,9 @@ def main(argv=None):
          
         if not os.path.isdir(opts.training_set_folder) :
              raise Exception("given training folder do not exist")
+       
+        if opts.rec_model != "LBPH" and opts.rec_model != "PCA" :
+            opts.rec_model = "LBPH"
          
         #remove trailing "/"
         if opts.training_set_folder[-1] == "/" :
@@ -617,7 +628,7 @@ def main(argv=None):
         connectMQTT()        
         
         if opts.face_model is not None:
-            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15)
+            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, recModel=opts.rec_model)
             
             if opts.nose_model is not None:
                 _lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = _faceTracker, id="nose-tracker", minNeighbors = 10)
