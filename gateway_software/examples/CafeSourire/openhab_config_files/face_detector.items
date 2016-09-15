@@ -1,0 +1,7 @@
+Group All
+Group gFaceDetector (All)
+Group gBackgroundItems (All)
+Group gSmileDetector (gFaceDetector)
+
+String  SmileDetected        "[%s]"                  (gBackgroundItems)                { mqtt="<[mqtt_creativity_lab_server:/CafeSourire/smile:state:default]" }
+String  SmileDetectedString  "[%s]"                  (gSmileDetector)                

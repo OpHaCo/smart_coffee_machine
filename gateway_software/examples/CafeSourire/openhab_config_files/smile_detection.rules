@@ -1,3 +1,6 @@
+ import java.util.Date
+ import java.text.SimpleDateFormat
+
 var boolean setBrewOnGoing = false
 var boolean coffeeOnGoing = false
 
@@ -12,13 +15,25 @@ then
 	else
 	{
 		coffeeOnGoing = true
+	
+		var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
+	    var String Timestamp = df.format( new Date() )
+	    
+	    //Play specific hello message depending on user
+	    logInfo("rules", executeCommandLine("./configurations/helper_scripts/play_coucou.sh " + SmileDetected.state.toString(), 1000000))
+	    
+	    if(SmileDetected.state.toString() != "NA")
+	    {
+	    	postUpdate(SmileDetectedString, SmileDetected.state.toString() + " smiled at " + Timestamp)
+	    }
+	    else
+	    {
+	    	postUpdate(SmileDetectedString, "Smiled detected at " + Timestamp + " - face not recognized")
+	    }
 		
 		// get actual status
 		sendCommand(getCoffeeMachineStatus, ON)
 		Thread::sleep(300)
-		
-	    // configure coffee brew
-	    //sendCommand(setBrew, "STRONG")
 	    
 	    if(CoffeeMachineStatus.state.toString() == "0")
 	    {
@@ -34,6 +49,7 @@ then
 	        {
 	        	logInfo("rules", "Ready to make coffee")
 	            sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+	            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
 	        }
 	        else if(CoffeeMachineStatus.state.toString() == "3"
 	            || CoffeeMachineStatus.state.toString() == "13")
@@ -50,16 +66,19 @@ then
 	            {
 	            	logInfo("rules", "Ready to make coffee")	
 	            	sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)	
+	            	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
 	            }
 	            else
 	            {
 	            	logInfo("rules", "Cannot make coffee - status " + CoffeeMachineStatus.state.toString())
+	            	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
 	            }
 	        	
 	        }
 	        else
 	        {
 	            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
+	            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
 	        }
 	    }   
 	    else if(CoffeeMachineStatus.state.toString() == "4"
@@ -69,10 +88,12 @@ then
 	            || CoffeeMachineStatus.state.toString() == "12")
 	    {
 	        	sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+	        	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
 	    }
 	    else
 	    {
 	            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
+	            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
 	    }
       coffeeOnGoing = false
 	}
@@ -116,4 +137,12 @@ then
       setBrewOnGoing = false
     }
     
+end
+
+rule initialiseSmileItems
+when System started
+then
+    if (SmileDetectedString.state== Uninitialized){
+        SmileDetectedString.postUpdate("No smile detected yet")
+    }
 end
