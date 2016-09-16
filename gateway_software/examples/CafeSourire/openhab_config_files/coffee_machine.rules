@@ -3,6 +3,8 @@
 
 var String currState = "0"
 var String lastState = "0"
+//Do not play twice power song but keep state update in rule
+var boolean powerSoundOnGoing = false
 
 rule powerButtonPressRule
 when Item CoffeeMachinePowerButton received command
@@ -13,17 +15,30 @@ end
 rule onStateUpdate
 when Item CoffeeMachineStatus received update
 then
-	if(lastState == "0" && CoffeeMachineStatus.state.toString() != "0")
-	{
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
-	}
-	else if(lastState != "0" && CoffeeMachineStatus.state.toString() == "0")
-	{
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_off.wav", 1000000))
-	}
+	var String lastTmpState = lastState
+	//Update state
 	lastState = currState
 	currState = CoffeeMachineStatus.state.toString()
-	
+		
+	if(powerSoundOnGoing)
+	{
+		//Nothing to do
+	}
+	else
+	{
+		if(lastTmpState == "0" && CoffeeMachineStatus.state.toString() != "0")
+		{
+			powerSoundOnGoing  = true
+			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
+			powerSoundOnGoing  = false
+		}
+		else if(lastTmpState != "0" && CoffeeMachineStatus.state.toString() == "0")
+		{
+			powerSoundOnGoing  = true
+			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_off.wav", 1000000))
+			powerSoundOnGoing  = false
+		}
+	}
 end	
 
 rule onPowerButtonPressRule
