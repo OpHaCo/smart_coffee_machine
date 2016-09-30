@@ -10,7 +10,7 @@ Environment=PYTHONUNBUFFERED=true
 User=remi
 WorkingDirectory=/home/remi/projects/smart_coffee_machine/gateway_software/examples/CafeSourire/
 ExecStart=/usr/bin/python ./detect_smile.py -f ./haarcascade/haarcascade_frontalface_default.xml -s ./haarcascade/haarcascade_smile.xml -t ./training_set/ 
-
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
