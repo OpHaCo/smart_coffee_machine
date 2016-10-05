@@ -70,6 +70,7 @@ import datetime
 import traceback 
 import numpy
 import paho.mqtt.client as mqtt
+import math 
 
 #We suppose arm target is raspberry
 if isArmHw :
@@ -104,13 +105,14 @@ _stopThreads = False
 
 class HaarObjectTracker():
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,255,0), id="", minNeighbors=0, verbose=0):
+    def __init__(self, cascadeFile, childTracker=None, color=(0,255,0), id="", minNeighbors=0, minSize=(100, 100), verbose=0):
         self.detector = cv2.CascadeClassifier(cascadeFile)
         self.childTracker = childTracker
         self.color = color
         self.id = id
         self.verbose = verbose
         self.minNeighbors = minNeighbors
+        self.minSize = minSize
         self.fps = 0 
 
     def detectAndDraw(self, frame, drawFrame, fps):
@@ -141,7 +143,7 @@ class HaarObjectTracker():
             
             ownDetections = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
                                                      minNeighbors=self.minNeighbors,
-                                                     minSize=(30, 30),
+                                                     minSize=self.minSize,
                                                      flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING | cv2.CASCADE_FIND_BIGGEST_OBJECT)
             for(x, y, w, h) in ownDetections :    
                
@@ -165,8 +167,8 @@ class HaarObjectTracker():
         
 class SmileTracker(HaarObjectTracker):
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0, mqttClient=None):
-        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, minSize=(10,10), verbose=0, mqttClient=None):
+        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, minSize, verbose)
         
         #minimum smile duration
         self.MIN_SMILE_DUR = 500
@@ -185,10 +187,13 @@ class SmileTracker(HaarObjectTracker):
         if len(childDetections) > 0 :
             faceSize = childDetections[0][3]*childDetections[0][4]
             #criterion over number of detected smiles : depends on face size    
-            haarCascadeCrit = faceSize*0.0045
-            print("face size = {}x{} - number of raw smile  / criterion : {} / {}".format(childDetections[0][3], childDetections[0][4], len(rawDetectedSmiles), haarCascadeCrit))
+            haarCascadeCrit = math.sqrt(faceSize)*1.66 - 82
+            mess="face size = {}x{} - number of raw smile  / criterion : {} / {}".format(childDetections[0][3], childDetections[0][4], len(rawDetectedSmiles), haarCascadeCrit)
+            if haarCascadeCrit <= 5 :
+                mess += " criterion <= 20 - face too small to detect a smile"
+            print(mess)   
 
-        if len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
+        if haarCascadeCrit > 20 and len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
             self.smileDuration = self.smileDuration + 1/self.fps*1000
             
             if(self.smileDuration > self.MIN_SMILE_DUR) :
@@ -216,8 +221,8 @@ class SmileTracker(HaarObjectTracker):
     
 class FaceTracker(HaarObjectTracker):
     
-    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, verbose=0, recModel="LBPH"):
-        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, verbose)
+    def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, minSize=(50,50), verbose=0, recModel="LBPH"):
+        HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, minSize, verbose)
         self.captureFace = [False, ""]
         self.faceRecModel = None
         self.trainingImages = []
@@ -370,8 +375,8 @@ class FaceTracker(HaarObjectTracker):
     
 class LowerFaceTracker(HaarObjectTracker):
     
-    def __init__(self, noseCascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=10):
-        HaarObjectTracker.__init__(self, noseCascadeFile, childTracker, color, id)
+    def __init__(self, noseCascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=10, minSize=(40,40)):
+        HaarObjectTracker.__init__(self, noseCascadeFile, childTracker, color, id, minNeighbors, minSize)
 
     
     def detectAndDraw(self, frame, drawFrame, fps):
@@ -628,16 +633,17 @@ def main(argv=None):
         connectMQTT()        
         
         if opts.face_model is not None:
-            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, recModel=opts.rec_model)
+            #minSize parameter increase => min subject distance with camera needed to detect smile increase
+            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, minSize=(60,60), recModel=opts.rec_model)
             
             if opts.nose_model is not None:
                 _lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = _faceTracker, id="nose-tracker", minNeighbors = 10)
-                _smileTracker = SmileTracker(opts.smile_model, _lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
+                _smileTracker = SmileTracker(opts.smile_model, _lowerFaceTracker, (255,0,00), "smile-tracker", minNeighbors=0, minSize=(10,10), verbose=1, mqttClient=_mqttClient)
             else:
-                _smileTracker = SmileTracker(opts.smile_model, _faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
+                _smileTracker = SmileTracker(opts.smile_model, _faceTracker, (255,0,0), "smile-tracker", minNeighbors=0, minSize=(10,10), verbose=1, mqttClient=_mqttClient)
             
         else:
-            _smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, verbose=1, mqttClient=_mqttClient)
+            _smileTracker = SmileTracker(opts.smile_model, None, (255,0,0), "smile-tracker", minNeighbors=0, minSize=(10,10), verbose=1, mqttClient=_mqttClient)
 
         # perform capture in a separate thread
         captureTh = Thread(target=captureThread, args=(opts,)) 
@@ -647,10 +653,12 @@ def main(argv=None):
         currFrameIndex = 0 
         while captureTh.isAlive :
             if _frameCounter != currFrameIndex :
-                #print("Handle frame {0}".format(_frameCounter))
+                print("Handle frame {0}".format(_frameCounter))
                 if not handleFrame(_frame, _smileTracker, opts):
                     break
                 currFrameIndex = _frameCounter
+            else:
+                time.sleep(0.02)
     
     except KeyboardInterrupt as k:
         sys.stderr.write("program will exit\nBye!\n")
@@ -690,13 +698,17 @@ if __name__ == "__main__":
         STAT_FILE = 'profile_stats{}' 
         stats.save(STAT_FILE.format('.pstat'), type='pstat')
         
-        # pstat format better than yappi format
         with open(STAT_FILE.format('.txt'), 'w') as fh :
+            # pstat format better than yappi format
             ps = pstats.Stats(STAT_FILE.format('.pstat'), stream = fh)
             ps.sort_stats('time')
             ps.print_stats()
+            ps.sort_stats('cumulative')
+            ps.print_stats()
             #append thread stats
             tstats.print_all(out = fh)
+            #add function stat with yappi format
+            stats.print_all(out=fh)
 
         sys.exit(exit_code)
     
