@@ -320,7 +320,7 @@ class FaceTracker(HaarObjectTracker):
             #      cv::createEigenFaceRecognizer(0, 123.0);
             #
             # Cannot set threshold : https://github.com/opencv/opencv_contrib/issues/512
-            self.faceRecModel = cv2.face.createEigenFaceRecognizer(threshold=2000)
+            self.faceRecModel = cv2.face.createEigenFaceRecognizer(threshold=3000)
         
         else : #LBPH    
 	    # The following lines create an LBPH model for
@@ -361,8 +361,8 @@ class FaceTracker(HaarObjectTracker):
                 return "NA"
             else :
                 print("Detected face label = {} , confidence = {} - subject id = {}".format(foundLabel, confidence, self.subjectIds[foundLabel]))
-                cv2.imshow("frame resized", face)
-                cv2.imshow("found image", self.trainingImages[self.labels.index(foundLabel)]) 
+                #cv2.imshow("frame resized", face)
+                #cv2.imshow("found image", self.trainingImages[self.labels.index(foundLabel)]) 
             
                 return self.subjectIds[foundLabel]
         else :
@@ -678,14 +678,26 @@ if __name__ == "__main__":
         import doctest
         doctest.testmod()
     if PROFILE:
-        import cProfile
         import pstats
-        profile_filename = '_profile.txt'
-        cProfile.run('main()', profile_filename)
-        statsfile = open("profile_stats.txt", "wb")
-        p = pstats.Stats(profile_filename, stream=statsfile)
-        stats = p.strip_dirs().sort_stats('cumulative')
-        stats.print_stats()
-        statsfile.close()
-        sys.exit(0)
+        #Use yappi in multithreaded context
+        import yappi
+        
+        yappi.start()
+        exit_code = main()
+        yappi.stop()
+        stats = yappi.get_func_stats()
+        tstats = yappi.get_thread_stats()
+        STAT_FILE = 'profile_stats{}' 
+        stats.save(STAT_FILE.format('.pstat'), type='pstat')
+        
+        # pstat format better than yappi format
+        with open(STAT_FILE.format('.txt'), 'w') as fh :
+            ps = pstats.Stats(STAT_FILE.format('.pstat'), stream = fh)
+            ps.sort_stats('time')
+            ps.print_stats()
+            #append thread stats
+            tstats.print_all(out = fh)
+
+        sys.exit(exit_code)
+    
     sys.exit(main())
