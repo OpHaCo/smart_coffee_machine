@@ -5,6 +5,7 @@ var String currState = "0"
 var String lastState = "0"
 //Do not play twice power song but keep state update in rule
 var boolean powerSoundOnGoing = false
+var boolean setBrewOnGoing = false
 
 rule powerButtonPressRule
 when Item CoffeeMachinePowerButton received command
@@ -91,10 +92,72 @@ then
 	postUpdate(CoffeeMachineBrewButton, "Last pressed " + Timestamp + " during " + OnCoffeeMachineBrewButtonPress.state.toString() + "ms")
 end
 
+rule SetBrew
+when
+    Item setBrew received command     
+then
+    logInfo("rules", "enter")
+    if(setBrewOnGoing == 1)
+    {
+        logInfo("rules", "Brew on going ... exit from rule")
+    }
+    else
+    {
+      logInfo("rules", "Set brew to " + receivedCommand.toString())
+      setBrewOnGoing = true;
+    
+      if(CoffeeMachineStatus.state.toString() != "6")
+      {
+        var index = 0
+        var boolean exitLoop = false
+        while(index <= 3 && !exitLoop)
+        {
+          logInfo("rules", "but actual state is " + CoffeeMachineStatus.state.toString())
+          sendCommand(CoffeeMachineBrewButtonPress, 1)
+          Thread::sleep(5000)
+          
+          if(CoffeeMachineStatus.state.toString() == "6")
+            exitLoop = true
+                        
+          index = index + 1
+        }
+    }
+    else
+    {
+        logInfo("rules", "Already to strong")
+      }
+      setBrewOnGoing = false
+    }
+    
+end
+
+rule DoCustomCoffee //Take a name as parameter
+when
+    Item doCustomCoffee received command     
+then
+	var String coffeeType = transform("MAP","custom_coffee.map",receivedCommand.toString())
+	logInfo("rules", "Set custom coffee to " + receivedCommand.toString() + " - coffee type = " + coffeeType)
+	
+	if(coffeeType == "COFFEE")
+	{
+		sendCommand(CoffeeMachineCoffeeButtonPress, ON)
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
+	}
+	else if(coffeeType == "SMALL_COFFEE")
+	{
+		sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
+	}
+	else
+	{
+		/** nothing to do */
+	}
+end
+
 rule testRule
 when Item testItem received update
 then
 	logInfo("rules", "testRule - begin")
-	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/nespresso.mp3", 1000000))
+	sendCommand(doCustomCoffee, testItem.state.toString())
 	logInfo("rules", "testRule - end")
 end

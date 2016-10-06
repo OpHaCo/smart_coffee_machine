@@ -27,6 +27,9 @@ String  CoffeeMachineBrewButton                    "Brew button [%s]"           
 Number  CoffeeMachineStatus                        "On saeco status [MAP(saeco_status.map):%s]"    (gCoffeeMachine, gCoffeeMachineButtonsCapture)              { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/status:state:default]" }
 
 Switch  getCoffeeMachineStatus                     "get coffee machine status"                     (gCoffeeMachine, gCoffeeMachineButtonsCapture)             { mqtt=">[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/getStatus:command:ON:0]" }
-String  setBrew                                     "Configure brew" 
+
+//FUNCTIONS
+String  setBrew                                     "Configure brew"                                (gBackgroundItems)
+String  doCustomCoffee                              "Custom coffee"                                 (gBackgroundItems)
 
 String  testItem                                   "[%s]"                                           (gBackgroundItems)                                        { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/test:state:default]"}
