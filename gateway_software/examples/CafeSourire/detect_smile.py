@@ -78,6 +78,7 @@ if isArmHw :
     from picamera import PiCamera
 
 from optparse import OptionParser
+import threading
 from threading import Thread
 
 __all__ = []
@@ -87,7 +88,7 @@ __updated__ = '2015-09-19'
 
 DEBUG = 0
 TESTRUN = 0
-PROFILE = 0
+PROFILE = 1 
 
 # constants
 MQTT_BROKER_ADD = "192.168.132.100"
@@ -101,7 +102,7 @@ _faceTracker = None
 _smileTracker = None
 _lowerFaceTracker = None
 _stopThreads = False
-
+_frameLock = threading.Lock()
 
 class HaarObjectTracker():
     
@@ -519,19 +520,28 @@ def capture(opts):
         videoCapture = cv2.VideoCapture(int(opts.video_source))
         videoCapture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_RES[0]) 
         videoCapture.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_RES[1]) 
-        videoCapture.grab()
+        # Do not work on official packages : http://stackoverflow.com/questions/7039575/how-to-set-camera-fps-in-opencv-cv-cap-prop-fps-is-a-fake
+        #videoCapture.set(cv2.CAP_PROP_FPS, 10)
     
     except ValueError as e:
         videoCapture = cv2.VideoCapture(opts.video_source)
     
     while not _stopThreads :
-        ret, _frame = videoCapture.read()    
+        ret = videoCapture.grab()
         if not ret:
+            time.sleep(0.01)
             break
-            
-        if(_frameCounter == 0) :
-            print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
-        _frameCounter += 1
+        ret, frame = videoCapture.retrieve()    
+        if not ret:
+            time.sleep(0.01)
+            break
+        with _frameLock :
+            #copy frame handled by video capturing structure, so it won't be modified by next captures
+            _frame = numpy.copy(frame)
+
+            if(_frameCounter == 0) :
+                print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
+            _frameCounter += 1
             
     videoCapture.release()
 
@@ -554,10 +564,13 @@ def rpiCapture(opts):
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True) :
 	# grab the raw NumPy array representing the image, then initialize the timestamp
 	# and occupied/unoccupied text
-        _frame = frame.array
-        if(_frameCounter == 0) :
-            print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
-        _frameCounter += 1
+   
+        with _frameLock :
+            #copy frame handled by video capturing structure, so it won't be modified by next captures
+            _frame = numpy.copy(frame.array)
+            if(_frameCounter == 0) :
+                print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
+            _frameCounter += 1
 
 	# clear the stream in preparation for the next frame
         rawCapture.truncate(0)    
@@ -634,7 +647,7 @@ def main(argv=None):
         
         if opts.face_model is not None:
             #minSize parameter increase => min subject distance with camera needed to detect smile increase
-            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, minSize=(60,60), recModel=opts.rec_model)
+            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, minSize=(80,80), recModel=opts.rec_model)
             
             if opts.nose_model is not None:
                 _lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = _faceTracker, id="nose-tracker", minNeighbors = 10)
@@ -652,12 +665,21 @@ def main(argv=None):
         
         currFrameIndex = 0 
         while captureTh.isAlive :
+            _frameLock.acquire()
             if _frameCounter != currFrameIndex :
+                #do a copy of frame because capture thread can write to _frame after lock is released.
+                # => double buffering 
+                #do a copy of _frameCounter as it can be modified after lock is released
+                frameCounter = _frameCounter
+                frame = numpy.copy(_frame)
+                _frameLock.release()
+
                 print("Handle frame {0}".format(_frameCounter))
-                if not handleFrame(_frame, _smileTracker, opts):
+                if not handleFrame(frame, _smileTracker, opts):
                     break
-                currFrameIndex = _frameCounter
+                currFrameIndex = frameCounter
             else:
+                _frameLock.release()
                 time.sleep(0.02)
     
     except KeyboardInterrupt as k:
