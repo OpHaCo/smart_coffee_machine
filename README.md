@@ -16,6 +16,9 @@ Some other products can do it for you : http://smarter.am/coffee/ . But with Sma
 Best choice for a super automatic & connected coffee machine is Philips Saeco Gran Baristo Avanti. It is connected over bluetooth. Due to bluetooth range limitations, you won't be able to do your coffee from your bedroom. It costs 2500$!!  
 [Fortune and smart coffee maker](http://fortune.com/2015/12/24/smart-coffee-maker/)
 
+Here is a short video showing some machine features :
+[![Coffee machine features](https://raw.githubusercontent.com/OpHaCo/smart_coffee_machine/master/img/thumbnail_video.png)](https://www.youtube.com/watch?v=XyN8fK3VjO4)
+
 With this project you will :
  *  **make your automatic coffee machine smarter adding means to control it from anywhere**  e.g. : 
     *  prepare coffee for tomorrow morning at 8AM 
