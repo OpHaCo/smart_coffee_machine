@@ -144,12 +144,12 @@ then
 	if(coffeeType == "COFFEE")
 	{
 		sendCommand(CoffeeMachineCoffeeButtonPress, ON)
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile, 1000000))
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
 	}
 	else if(coffeeType == "SMALL_COFFEE")
 	{
 		sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile, 1000000))
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
 	}
 	else
 	{

@@ -1,10 +1,11 @@
 #!/bin/bash
 
-if [[ $1 == *.mp3 ]]
+# Use sox to play music : http://sox.sourceforge.net/sox.html
+if [[ $2 == '-f' ]]
 then
-  mpg123 $1 > /dev/null 2>&1
+  play $1 fade t 4 -0 4 > /dev/null 2>&1 
 else
-  aplay $1 > /dev/null 2>&1
+  play $1 > /dev/null 2>&1
 fi
 
 if [ $? -ne 0 ]
