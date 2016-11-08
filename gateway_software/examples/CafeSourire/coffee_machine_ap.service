@@ -1,0 +1,12 @@
+[Unit]
+Description=Coffee machine access point service
+Requires=
+After=
+
+[Service]
+WorkingDirectory=/home/remi/projects/smart_coffee_machine/gateway_software/examples/CafeSourire/
+ExecStart=/usr/bin/sh ./access_point/start_coffee_machine_ap.sh wlan0 
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
