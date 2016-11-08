@@ -71,6 +71,7 @@ static void onPowerBtnPress(uint32_t dur);
 static void setupWifi(void);
 static void setupOTA(void);
 static void setupSaecoCoffeeMachine(void);
+static void connectMQTT(void);
 static void setupMQTT(void);
 static void setupMQTTTopics(void);
 static void setupMQTTSubs(void);
