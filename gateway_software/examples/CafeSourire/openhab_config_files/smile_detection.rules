@@ -20,7 +20,9 @@ then
 	    var String Timestamp = df.format( new Date() )
 	    
 	    //Play specific hello message depending on user
-	    logInfo("rules", executeCommandLine("./configurations/helper_scripts/play_coucou.sh " + SmileDetected.state.toString(), 1000000))
+	    var String userLang = transform("MAP","user_lang.map",SmileDetected.state.toString())
+	    var String userWelcomeMsg = transform("MAP","welcome_message.map",SmileDetected.state.toString())
+	    logInfo("rules", executeCommandLine("./configurations/helper_scripts/say.sh " + userLang + " " + userWelcomeMsg, 1000000))
 	    
 	    var String coffeeType = transform("MAP","custom_coffee.map",SmileDetected.state.toString())
 	    if(coffeeType == "NO_COFFEE")
