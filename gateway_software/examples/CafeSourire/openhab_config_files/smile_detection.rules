@@ -1,20 +1,26 @@
  import java.util.Date
  import java.text.SimpleDateFormat
 
-var boolean coffeeOnGoing = false
+rule initialiseSmileItems
+when System started
+then
+    if (SmileDetectedString.state== Uninitialized){
+        SmileDetectedString.postUpdate("No smile detected yet")
+    }
+end
 
 rule SmileDetected
 when
     Item SmileDetected received update
 then
-	if(coffeeOnGoing)
+	if(CoffeeOnGoing.state.toString() == "ON")
 	
 	{
 		logInfo("rules", "Cannot make coffee - a coffee is already on going")
 	}
 	else
 	{
-		coffeeOnGoing = true
+		CoffeeOnGoing.postUpdate(ON)
 	
 		var SimpleDateFormat df = new SimpleDateFormat( "dd/MM/YYYY HH:mm:ss" )
 	    var String Timestamp = df.format( new Date() )
@@ -28,6 +34,7 @@ then
 	    if(coffeeType == "NO_COFFEE")
 	    {
 	    	// nothing to do
+	    	CoffeeOnGoing.postUpdate(OFF)
 	    }
 	    else
 	    {
@@ -79,6 +86,7 @@ then
 		            {
 		            	logInfo("rules", "Cannot make coffee - status " + CoffeeMachineStatus.state.toString())
 		            	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            	CoffeeOnGoing.postUpdate(OFF)
 		            }
 		        	
 		        }
@@ -86,6 +94,7 @@ then
 		        {
 		            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
 		            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            CoffeeOnGoing.postUpdate(OFF)
 		        }
 		    }   
 		    else if(CoffeeMachineStatus.state.toString() == "4"
@@ -101,17 +110,9 @@ then
 		    {
 		            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
 		            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            CoffeeOnGoing.postUpdate(OFF)
 		    }
 	  }
-      coffeeOnGoing = false
 	}
     
-end
-
-rule initialiseSmileItems
-when System started
-then
-    if (SmileDetectedString.state== Uninitialized){
-        SmileDetectedString.postUpdate("No smile detected yet")
-    }
 end
