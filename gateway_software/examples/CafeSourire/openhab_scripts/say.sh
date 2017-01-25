@@ -19,4 +19,12 @@ then
   exit 1
 fi
 play /tmp/sound_temp.wav > /dev/null 2>&1
+if [ $? -ne 0 ]
+then
+  #Info for openhab
+  echo "Could not say $2 - error : $?"
+  exit 1
+fi
+#Info for openhab
+echo "Successfully said $2"
 exit 0

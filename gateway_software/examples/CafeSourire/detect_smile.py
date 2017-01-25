@@ -88,10 +88,10 @@ __updated__ = '2015-09-19'
 
 DEBUG = 0
 TESTRUN = 0
-PROFILE = 1 
+PROFILE = 0 
 
 # constants
-MQTT_BROKER_ADD = "192.168.132.100"
+MQTT_BROKER_ADD = "localhost"
 CAPTURE_RES     = (480, 368)
 
 _frame = []
@@ -188,9 +188,11 @@ class SmileTracker(HaarObjectTracker):
         if len(childDetections) > 0 :
             faceSize = childDetections[0][3]*childDetections[0][4]
             #criterion over number of detected smiles : depends on face size    
-            haarCascadeCrit = math.sqrt(faceSize)*1.66 - 82
+            haarCascadeCrit = math.sqrt(faceSize)*1.56 - 82
+            # For demo with light
+            #haarCascadeCrit = math.sqrt(faceSize)*1.96 - 82
             mess="face size = {}x{} - number of raw smile  / criterion : {} / {}".format(childDetections[0][3], childDetections[0][4], len(rawDetectedSmiles), haarCascadeCrit)
-            if haarCascadeCrit <= 5 :
+            if haarCascadeCrit <= 20 :
                 mess += " criterion <= 20 - face too small to detect a smile"
             print(mess)   
 
@@ -202,9 +204,13 @@ class SmileTracker(HaarObjectTracker):
                     self.smileOnGoing = True
                     print("smile detected")
                     if self.mqttClient is not None :
-                        self.mqttClient.publish("/CafeSourire/smile", rawDetectedSmiles[0][5])
+                        (result, mid) = self.mqttClient.publish("/CafeSourire/smile", rawDetectedSmiles[0][5])
+                        if (result == mqtt.MQTT_ERR_SUCCESS) :
+                            print("message \'{}\'  published to \'{}\'".format(rawDetectedSmiles[0][5], "/CafeSourire/smile"))
+                        else : 
+                            print("could not publish message to MQTT - error {}".format(result))
             
-                #mean for found smile
+                
                 #remove first column (frame) 
                 rects = numpy.delete(rawDetectedSmiles, 0, 1)
                 #remove last column (id)
@@ -349,7 +355,7 @@ class FaceTracker(HaarObjectTracker):
 	    #
 	    # And if you want a threshold (e.g. 123.0) call it with its default values:
             # cv::createLBPHFaceRecognizer(1,8,8,8,123.0)
-            self.faceRecModel = cv2.face.createLBPHFaceRecognizer(threshold=80)
+            self.faceRecModel = cv2.face.createLBPHFaceRecognizer(threshold=70)
 
         self.faceRecModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
 
@@ -467,10 +473,13 @@ def handleFrame(frame, tracker, opts) :
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
+    # Adjust brightness and contrast
     # Adaptative histogram equalization
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     gray = clahe.apply(gray)
-    
+    # Or classic historgram equalization
+    # cv2.equalizeHist(gray, gray);
+
     if handleFrame.fps != 0 :
         tracker.detectAndDraw(gray, gray, handleFrame.fps)
 
@@ -554,7 +563,7 @@ def rpiCapture(opts):
     # initialize the camera and grab a reference to the raw camera capture
     camera= PiCamera()
     camera.resolution = CAPTURE_RES 
-    camera.framerate = 32
+    camera.framerate = 4 
     rawCapture = PiRGBArray(camera, size=CAPTURE_RES)
     
     # allow the camera to warmup
@@ -564,7 +573,6 @@ def rpiCapture(opts):
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True) :
 	# grab the raw NumPy array representing the image, then initialize the timestamp
 	# and occupied/unoccupied text
-   
         with _frameLock :
             #copy frame handled by video capturing structure, so it won't be modified by next captures
             _frame = numpy.copy(frame.array)
@@ -572,7 +580,7 @@ def rpiCapture(opts):
                 print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
             _frameCounter += 1
 
-	# clear the stream in preparation for the next frame
+	    # clear the stream in preparation for the next frame
         rawCapture.truncate(0)    
         
         if _stopThreads :
@@ -647,7 +655,7 @@ def main(argv=None):
         
         if opts.face_model is not None:
             #minSize parameter increase => min subject distance with camera needed to detect smile increase
-            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, minSize=(80,80), recModel=opts.rec_model)
+            _faceTracker = FaceTracker(cascadeFile=opts.face_model, id="face-tracker", minNeighbors=15, minSize=(90,90), recModel=opts.rec_model)
             
             if opts.nose_model is not None:
                 _lowerFaceTracker = LowerFaceTracker(noseCascadeFile = opts.nose_model, childTracker = _faceTracker, id="nose-tracker", minNeighbors = 10)
@@ -664,7 +672,7 @@ def main(argv=None):
         captureTh.start()
         
         currFrameIndex = 0 
-        while captureTh.isAlive :
+        while captureTh.isAlive() :
             _frameLock.acquire()
             if _frameCounter != currFrameIndex :
                 #do a copy of frame because capture thread can write to _frame after lock is released.
@@ -674,14 +682,14 @@ def main(argv=None):
                 frame = numpy.copy(_frame)
                 _frameLock.release()
 
-                print("Handle frame {0}".format(_frameCounter))
+                #print("Handle frame {0}".format(_frameCounter))
                 if not handleFrame(frame, _smileTracker, opts):
                     break
                 currFrameIndex = frameCounter
             else:
                 _frameLock.release()
                 time.sleep(0.02)
-    
+
     except KeyboardInterrupt as k:
         sys.stderr.write("program will exit\nBye!\n")
         return 0
@@ -711,7 +719,6 @@ if __name__ == "__main__":
         import pstats
         #Use yappi in multithreaded context
         import yappi
-        
         yappi.start()
         exit_code = main()
         yappi.stop()
