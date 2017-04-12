@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# check an mpd server is found
+if ! mpc > /dev/null ; then
+    echo "Cannot connect server" 
+    exit 1
+fi
+
 for i in $(mpc --format ""); do
     a=$i
     break
