@@ -17,7 +17,7 @@ else
   done
 fi
 
-if [ -z $was_playing ] && [ $was_playing == 'was_playing' ]
+if [ ! -z "$was_playing" ] && [ "$was_playing" == 'was_playing' ]
 then
   sleep 3 
   source $curr_folder/mpd_play_pause.sh play
