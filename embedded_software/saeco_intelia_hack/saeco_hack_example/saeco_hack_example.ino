@@ -1,5 +1,3 @@
-#include <Adafruit_NeoPixel.h>
-
 /******************************************************************************
  * @file    saeco_hack_example.ino
  * @author  Rémi Pincent - INRIA
@@ -129,11 +127,11 @@ void setup() {
   #ifdef ENABLE_STATUS
   Serial.println("Coffee machine status enabled over Rx using Teensy daughterboard");
   #endif
-
+  
+  setupSaecoCoffeeMachine();
   setupWifi();
   setupMQTT();
   setupOTA();
-  setupSaecoCoffeeMachine();
 }
 
 void loop() {
