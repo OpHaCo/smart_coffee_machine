@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # check an mpd server is found
-if ! mpc > /dev/null ; then
+if ! mpc  > /dev/null 2>&1 ; then
     echo "Cannot connect server" 
     exit 1
 fi
