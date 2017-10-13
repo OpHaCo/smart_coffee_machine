@@ -355,7 +355,7 @@ class FaceTracker(HaarObjectTracker):
 	    #
 	    # And if you want a threshold (e.g. 123.0) call it with its default values:
             # cv::createLBPHFaceRecognizer(1,8,8,8,123.0)
-            self.faceRecModel = cv2.face.createLBPHFaceRecognizer(threshold=70)
+            self.faceRecModel = cv2.face.LBPHFaceRecognizer_create(threshold=70)
 
         self.faceRecModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
 
