@@ -26,7 +26,7 @@ while ! play /tmp/sound_temp.wav > /dev/null 2>&1
 do
   sleep 1
 done 
-if [ ! -z $was_playing ] && [ $was_playing == 'was_playing' ]
+if [ ! -z "$was_playing" ] && [ "$was_playing" == "was_playing" ]
 then
   sleep 3 
   source $curr_folder/mpd_play_pause.sh play

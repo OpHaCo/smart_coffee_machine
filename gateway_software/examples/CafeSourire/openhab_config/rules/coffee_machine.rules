@@ -34,14 +34,12 @@ then
 	{
 		if(lastState == "0" && currState != "0")
 		{
-			logInfo("rules", "before 1");
 			powerSoundOnGoing  = true
 			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
 			powerSoundOnGoing  = false
 		}
 		else if(lastState != "0" && currState == "0")
 		{
-			logInfo("rules", "before 2");
 			powerSoundOnGoing  = true
 			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_off.wav", 1000000))
 			powerSoundOnGoing  = false
