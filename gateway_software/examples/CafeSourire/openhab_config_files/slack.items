@@ -1,0 +1,4 @@
+Group gSlack (All)
+
+String Slack          (gSlack)
+String SlackMessage   (gSlack)

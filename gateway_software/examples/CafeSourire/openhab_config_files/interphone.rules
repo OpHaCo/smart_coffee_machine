@@ -1,0 +1,17 @@
+var boolean interphoneRinging = false
+
+rule interphoneCall
+when Item Interphone received command
+then
+	if(!interphoneRinging)
+	{
+		interphoneRinging = true
+		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/klaxon.wav", 1000000))
+		logInfo("rules", executeCommandLine("./configurations/helper_scripts/say.sh fr-FR quelqu'un attend à l'" + transform("MAP","interphone_place.map", receivedCommand.toString()), 1000000))
+		interphoneRinging = false
+	}
+	else
+	{
+		logInfo("rules", "interphone already ringing")
+	} 
+end

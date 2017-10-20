@@ -32,4 +32,7 @@ Switch  getCoffeeMachineStatus                     "get coffee machine status"  
 String  setBrew                                     "Configure brew"                                (gBackgroundItems)
 String  doCustomCoffee                              "Custom coffee"                                 (gBackgroundItems)
 
+//STATE
+Switch CoffeeOnGoing                                                                                (gBackgroundItems)
+
 String  testItem                                   "[%s]"                                           (gBackgroundItems)                                        { mqtt="<[mqtt_creativity_lab_server:/amiqual4home/machine_place/saeco_intelia/test:state:default]"}

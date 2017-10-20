@@ -1,7 +1,7 @@
 [Unit]
 Description=Smile detection service
-Requires=openhab.service
-After=openhab.service                                    
+Requires=openhab.service coffee_machine_ap.service
+After=openhab.service coffee_machine_ap.service
 
 [Service]
 # Note: setting PYTHONUNBUFFERED is necessary to see the output of this service in the journal

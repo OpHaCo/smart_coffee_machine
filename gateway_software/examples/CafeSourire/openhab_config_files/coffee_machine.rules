@@ -7,6 +7,13 @@ var String lastState = "0"
 var boolean powerSoundOnGoing = false
 var boolean setBrewOnGoing = false
 
+rule initialiseCoffeeMachineItems
+when System started
+then
+    CoffeeOnGoing.postUpdate(OFF)
+end
+
+
 rule powerButtonPressRule
 when Item CoffeeMachinePowerButton received command
 then
@@ -155,12 +162,21 @@ then
 	{
 		/** nothing to do */
 	}
+	CoffeeOnGoing.postUpdate(OFF)
 end
 
 rule testRule
 when Item testItem received update
 then
 	logInfo("rules", "testRule - begin")
-	logInfo("rules", transform("MAP","custom_coffee_music.map",testItem.state.toString()))
+	if(SqArtist.state != Uninitialized && SqTitle.state != Uninitialized)
+	{
+		sendCommand(Slack, SqArtist.state + " " + SqTitle.state)
+	}
+	else
+	{
+		sendCommand(Slack, "Désolé... le titre de ton kif n'est pas dispo...")
+	}
+	
 	logInfo("rules", "testRule - end")
 end

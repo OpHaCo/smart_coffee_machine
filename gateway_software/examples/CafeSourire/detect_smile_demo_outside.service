@@ -1,0 +1,11 @@
+[Unit]
+Description=Smart Coffee machine demonstration outside!
+Wants=detect_smile.service
+Before=detect_smile.service
+
+[Service]
+WorkingDirectory=/home/remi/projects/smart_coffee_machine/gateway_software/examples/CafeSourire/
+ExecStart=/bin/sh ./configure_demo.sh outside 
+
+[Install]
+WantedBy=multi-user.target
