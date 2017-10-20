@@ -3,6 +3,8 @@
 
 var String currState = "0"
 var String lastState = "0"
+var String HAB_CONFIG_PATH = "/etc/openhab2/"
+
 //Do not play twice power song but keep state update in rule
 var boolean powerSoundOnGoing = false
 var boolean setBrewOnGoing = false
@@ -35,13 +37,13 @@ then
 		if(lastState == "0" && currState != "0")
 		{
 			powerSoundOnGoing  = true
-			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_on.wav", 1000000))
+			logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/say.sh fr-FR " + " " + "'Bonjour mesdames et messieurs'", 1000000))
 			powerSoundOnGoing  = false
 		}
 		else if(lastState != "0" && currState == "0")
 		{
 			powerSoundOnGoing  = true
-			logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/power_off.wav", 1000000))
+			logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/say.sh fr-FR " + " " + "'A bientot'", 1000000))
 			powerSoundOnGoing  = false
 		}
 	}
@@ -142,19 +144,19 @@ when
     Item doCustomCoffee received command     
 then
 	var String coffeeType = transform("MAP","custom_coffee.map", receivedCommand.toString())
-	var String musicFile = "./sounds/" + transform("MAP","custom_coffee_music.map", receivedCommand.toString())
+	var String musicFile = HAB_CONFIG_PATH + "sounds/" + transform("MAP","custom_coffee_music.map", receivedCommand.toString())
 	
 	logInfo("rules", "Set custom coffee to " + receivedCommand.toString() + " - coffee type = " + coffeeType)
 	
 	if(coffeeType == "COFFEE")
 	{
 		sendCommand(CoffeeMachineCoffeeButtonPress, ON)
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
+		logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
 	}
 	else if(coffeeType == "SMALL_COFFEE")
 	{
 		sendCommand(CoffeeMachineSmallCoffeeButtonPress, ON)
-		logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
+		logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/play_sound.sh " + musicFile + " -f", 1000000))
 	}
 	else
 	{
@@ -167,14 +169,6 @@ rule testRule
 when Item testItem received update
 then
 	logInfo("rules", "testRule - begin")
-	if(SqArtist.state != Uninitialized && SqTitle.state != Uninitialized)
-	{
-		sendCommand(Slack, SqArtist.state + " " + SqTitle.state)
-	}
-	else
-	{
-		sendCommand(Slack, "Désolé... le titre de ton kif n'est pas dispo...")
-	}
-	
+	logInfo("rules", executeCommandLine("pwd", 5000))
 	logInfo("rules", "testRule - end")
 end
