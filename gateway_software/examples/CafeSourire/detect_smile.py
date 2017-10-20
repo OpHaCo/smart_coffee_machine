@@ -187,6 +187,14 @@ class SmileTracker(HaarObjectTracker):
 
         if len(childDetections) > 0 :
             faceSize = childDetections[0][3]*childDetections[0][4]
+
+            if self.mqttClient is not None :
+                (result, mid) = self.mqttClient.publish("/CafeSourire/face", len(childDetections))
+                if (result == mqtt.MQTT_ERR_SUCCESS) :
+                    print("message \'{}\'  published to \'{}\'".format(len(childDetections), "/CafeSourire/face"))
+                else : 
+                    print("could not publish message to MQTT - error {}".format(result))
+
             #criterion over number of detected smiles : depends on face size    
             haarCascadeCrit = math.sqrt(faceSize)*1.56 - 82
             # For demo with light

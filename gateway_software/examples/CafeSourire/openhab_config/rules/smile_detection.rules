@@ -11,6 +11,17 @@ then
     }
 end
 
+rule FaceDetected
+when
+    Item FaceDetected received update
+then
+	if(CoffeeMachineStatus.state.toString() == "0")
+	{
+		logInfo("rules", "a face has been detected - start coffee machine")
+		sendCommand(CoffeeMachinePowerButtonPress, ON)	
+	}
+end
+
 rule SmileDetected
 when
     Item SmileDetected received update

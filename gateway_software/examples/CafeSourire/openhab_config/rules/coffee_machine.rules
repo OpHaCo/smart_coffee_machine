@@ -12,6 +12,9 @@ var boolean setBrewOnGoing = false
 rule initialiseCoffeeMachineItems
 when System started
 then
+	logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/say.sh fr-FR " + " " + "'désormé je suis a votre service'", 1000000))
+	// get actual status
+	sendCommand(getCoffeeMachineStatus, ON)
     CoffeeOnGoing.postUpdate(OFF)
 end
 
