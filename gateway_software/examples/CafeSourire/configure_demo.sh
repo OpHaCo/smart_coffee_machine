@@ -55,7 +55,11 @@ then
 		echo 'a4h training set already used'
 	else
 		echo 'set a4h training set'
-		ln -nfs $DIR/training_set_a4h $DIR/training_set
+		if ! ln -nfs $DIR/training_set_a4h $DIR/training_set
+    then
+      (>&2 echo 'cannot create training set symbolic link')
+      exit 1
+    fi
 	fi
 else
 	echo 'outside mode'
@@ -73,6 +77,10 @@ else
 		echo 'demo training set already used'
 	else
 		echo 'set demo training set'
-		ln -nfs $DIR/training_set_demo $DIR/training_set
+		if ! ln -nfs $DIR/training_set_demo $DIR/training_set
+    then
+      (>&2 echo 'cannot create training set symbolic link')
+      exit 1
+    fi
 	fi
 fi

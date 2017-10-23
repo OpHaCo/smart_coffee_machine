@@ -1,12 +1,25 @@
  import java.util.Date
  import java.text.SimpleDateFormat
 
+var String HAB_CONFIG_PATH = "/etc/openhab2/"
+
 rule initialiseSmileItems
 when System started
 then
-    if (SmileDetectedString.state== Uninitialized){
+    if (SmileDetectedString.state == NULL){
         SmileDetectedString.postUpdate("No smile detected yet")
     }
+end
+
+rule FaceDetected
+when
+    Item FaceDetected received update
+then
+	if(CoffeeMachineStatus.state.toString() == "0")
+	{
+		logInfo("rules", "a face has been detected - start coffee machine")
+		sendCommand(CoffeeMachinePowerButtonPress, ON)	
+	}
 end
 
 rule SmileDetected
@@ -28,7 +41,7 @@ then
 	    //Play specific hello message depending on user
 	    var String userLang = transform("MAP","user_lang.map",SmileDetected.state.toString())
 	    var String userWelcomeMsg = transform("MAP","welcome_message.map",SmileDetected.state.toString())
-	    logInfo("rules", executeCommandLine("./configurations/helper_scripts/say.sh " + userLang + " " + userWelcomeMsg, 1000000))
+	    logInfo("rules", executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/say.sh " + userLang + " " + userWelcomeMsg, 1000000))
 	    
 	    var String coffeeType = transform("MAP","custom_coffee.map",SmileDetected.state.toString())
 	    if(coffeeType == "NO_COFFEE")
@@ -85,7 +98,7 @@ then
 		            else
 		            {
 		            	logInfo("rules", "Cannot make coffee - status " + CoffeeMachineStatus.state.toString())
-		            	logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            	logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/play_sound.sh " + HAB_CONFIG_PATH + "sounds/error.wav", 1000000))
 		            	CoffeeOnGoing.postUpdate(OFF)
 		            }
 		        	
@@ -93,7 +106,7 @@ then
 		        else
 		        {
 		            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
-		            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/play_sound.sh " + HAB_CONFIG_PATH + "sounds/error.wav", 1000000))
 		            CoffeeOnGoing.postUpdate(OFF)
 		        }
 		    }   
@@ -109,7 +122,7 @@ then
 		    else
 		    {
 		            logInfo("rules", "Cannot prepare coffee - machine state = " + CoffeeMachineStatus.state.toString())
-		            logInfo("rules", " " + executeCommandLine("./configurations/helper_scripts/play_sound.sh ./sounds/error.wav", 1000000))
+		            logInfo("rules", " " + executeCommandLine(HAB_CONFIG_PATH + "helper_scripts/play_sound.sh " + HAB_CONFIG_PATH + "sounds/error.wav", 1000000))
 		            CoffeeOnGoing.postUpdate(OFF)
 		    }
 	  }
