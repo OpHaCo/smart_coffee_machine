@@ -145,7 +145,7 @@ class HaarObjectTracker():
             ownDetections = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
                                                      minNeighbors=self.minNeighbors,
                                                      minSize=self.minSize,
-                                                     flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING | cv2.CASCADE_FIND_BIGGEST_OBJECT)
+                                                     flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING )
             for(x, y, w, h) in ownDetections :    
                
                 #add detected rectangle
@@ -405,7 +405,7 @@ class LowerFaceTracker(HaarObjectTracker):
          
         retDetections = []
            
-        for (pframe, px, py, pw, ph) in childDetections:
+        for (pframe, px, py, pw, ph, id) in childDetections:
             
             noses = self.detector.detectMultiScale(pframe, scaleFactor=1.1,
                                                      minNeighbors=self.minNeighbors,
@@ -433,7 +433,7 @@ class LowerFaceTracker(HaarObjectTracker):
             lowerFrame = pframe[center_y:,0:]
             
             # translate coordinates to correspond to the the initial frame
-            retDetections.append((lowerFrame, px, py + center_y, lowerFrame.shape[1], lowerFrame.shape[0]))
+            retDetections.append((lowerFrame, px, py + center_y, lowerFrame.shape[1], lowerFrame.shape[0], id))
             
             # lower face's rectangle
             cv2.rectangle(drawFrame, (px + 2, py + center_y), (px + pw - 2, py + ph - 2), (255, 255, 255), 2)
