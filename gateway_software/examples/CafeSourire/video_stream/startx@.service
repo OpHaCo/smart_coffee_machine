@@ -1,0 +1,15 @@
+[Unit]
+Description=startx automatique pour l'utilisateur %I
+After=graphical.target systemd-user-sessions.service
+
+[Service]
+User=%I
+Environment=XAUTHORITY=/tmp/.Xauthority_%I
+Environment=XINITRC=./video_stream/no_wm_xinitrc 
+WorkingDirectory=/home/%I/projects/smart_coffee_machine/gateway_software/examples/CafeSourire/
+PAMName=login
+Type=simple
+ExecStart=/bin/xinit 
+
+[Install]
+WantedBy=graphical.target

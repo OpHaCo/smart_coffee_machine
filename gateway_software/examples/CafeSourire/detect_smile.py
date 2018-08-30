@@ -80,6 +80,7 @@ if isArmHw :
 from optparse import OptionParser
 import threading
 from threading import Thread
+from screeninfo import get_monitors
 
 __all__ = []
 __version__ = 0.1
@@ -93,6 +94,7 @@ PROFILE = 0
 # constants
 MQTT_BROKER_ADD = "localhost"
 CAPTURE_RES     = (480, 368)
+VIDEO_WINDOW = "video"
 
 _frame = []
 _frameCounter = 0
@@ -157,7 +159,6 @@ class HaarObjectTracker():
 
 
     def draw(self, detectedObjects, drawFrame):
-        
         for (frame, x, y, w, h, id) in detectedObjects:
             cv2.rectangle(drawFrame, (x, y), (x+w, y+h), self.color, 2)
             
@@ -172,7 +173,7 @@ class SmileTracker(HaarObjectTracker):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, minSize, verbose)
         
         #minimum smile duration
-        self.MIN_SMILE_DUR = 500
+        self.MIN_SMILE_DUR = 400
         #currentsmile duration in ms
         self.smileDuration = 0
         self.smileOnGoing = False 
@@ -183,6 +184,7 @@ class SmileTracker(HaarObjectTracker):
         detectedSmiles = []
         rawDetectedSmiles = super().detect(childDetections)
         haarCascadeCrit = 0
+        haarMinVal = 60
        
 
         if len(childDetections) > 0 :
@@ -196,15 +198,16 @@ class SmileTracker(HaarObjectTracker):
                     print("could not publish message to MQTT - error {}".format(result))
 
             #criterion over number of detected smiles : depends on face size    
-            haarCascadeCrit = math.sqrt(faceSize)*1.56 - 82
+            #haarCascadeCrit = faceSize*0.004436 +57 - 10
             # For demo with light
-            #haarCascadeCrit = math.sqrt(faceSize)*1.96 - 82
-            mess="face size = {}x{} - number of raw smile  / criterion : {} / {}".format(childDetections[0][3], childDetections[0][4], len(rawDetectedSmiles), haarCascadeCrit)
-            if haarCascadeCrit <= 20 :
-                mess += " criterion <= 20 - face too small to detect a smile"
+            #haarCascadeCrit = math.sqrt(faceSize)*2.2 - 82
+            haarCascadeCrit = math.sqrt(faceSize)*2.2 - 102
+            mess="face size = {}x{} = {} - number of raw smile  / criterion : {} / {}".format(childDetections[0][3], childDetections[0][4], childDetections[0][3]*childDetections[0][4], len(rawDetectedSmiles), haarCascadeCrit)
+            if haarCascadeCrit <= haarMinVal :
+                mess += " criterion <= " + str(haarMinVal) + " - face too small to detect a smile"
             print(mess)   
 
-        if haarCascadeCrit > 20 and len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
+        if haarCascadeCrit > haarMinVal and len(rawDetectedSmiles) > haarCascadeCrit and self.fps > 0 :
             self.smileDuration = self.smileDuration + 1/self.fps*1000
             
             if(self.smileDuration > self.MIN_SMILE_DUR) :
@@ -225,9 +228,13 @@ class SmileTracker(HaarObjectTracker):
                 rects = numpy.delete(rects, -1, 1)
                 rects = numpy.mean(rects, axis = 0)
                 detectedSmiles = [(rawDetectedSmiles[0][0], int(rects[0]), int(rects[1]), int(rects[2]), int(rects[3]), rawDetectedSmiles[0][5])]
+            else :
+                print("current smile duration is {}".format(self.smileDuration))
         else:
             if self.smileOnGoing :
                 print("smile duration was {}".format(self.smileDuration))
+            elif self.smileDuration > 0:
+                print("smile duration was {} reset to 0 - fps = {}".format(self.smileDuration, self.fps))
             self.smileOnGoing = False
             self.smileDuration = 0
         
@@ -239,7 +246,7 @@ class FaceTracker(HaarObjectTracker):
     def __init__(self, cascadeFile, childTracker=None, color=(0,0,255), id="", minNeighbors=0, minSize=(50,50), verbose=0, recModel="LBPH"):
         HaarObjectTracker.__init__(self, cascadeFile, childTracker, color, id, minNeighbors, minSize, verbose)
         self.captureFace = [False, ""]
-        self.faceRecModel = None
+        self.faceRecModel = {}
         self.trainingImages = []
         self.labels = []
         self.subjectIds = {}        
@@ -340,7 +347,8 @@ class FaceTracker(HaarObjectTracker):
             #      cv::createEigenFaceRecognizer(0, 123.0);
             #
             # Cannot set threshold : https://github.com/opencv/opencv_contrib/issues/512
-            self.faceRecModel = cv2.face.createEigenFaceRecognizer(threshold=3000)
+            self.faceRecModel["PCA"] = cv2.face.FisherFaceRecognizer_create(threshold=3000)
+            self.faceRecModel["PCA"].train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
         
         else : #LBPH    
 	    # The following lines create an LBPH model for
@@ -363,19 +371,17 @@ class FaceTracker(HaarObjectTracker):
 	    #
 	    # And if you want a threshold (e.g. 123.0) call it with its default values:
             # cv::createLBPHFaceRecognizer(1,8,8,8,123.0)
-            self.faceRecModel = cv2.face.LBPHFaceRecognizer_create(threshold=70)
-
-        self.faceRecModel.train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
+            self.faceRecModel["LBPH"] = cv2.face.LBPHFaceRecognizer_create(threshold=70)
+            self.faceRecModel["LBPH"].train(numpy.asarray(self.trainingImages), numpy.asarray(self.labels))  
 
     def recognizeFace(self, face) : 
-        if self.faceRecModel is not None :
+        if len(self.faceRecModel) > 0 :
             #try to detect face from eigen vectors
             # confidence no more accessible when using python 3.5 and and opencv 3.1.0 
             # https://github.com/opencv/opencv_contrib/issues/512
             # Solution (archlinux) : install opencv-git and modify PKGBUILD to add
             # opencv_contrib (add source and compilation flag)
-            foundLabel, confidence = self.faceRecModel.predict(face)
-            
+            foundLabel, confidence = self.faceRecModel[self.recModel].predict(face)
             if foundLabel == -1 :
                 print("Unable to recognize any face")
                 return "NA"
@@ -489,11 +495,11 @@ def handleFrame(frame, tracker, opts) :
     # cv2.equalizeHist(gray, gray);
 
     if handleFrame.fps != 0 :
-        tracker.detectAndDraw(gray, gray, handleFrame.fps)
+        tracker.detectAndDraw(gray, frame, handleFrame.fps)
 
     #keyboard actions on Video window
     if opts.video_stream :
-        cv2.imshow('Video', gray)
+        cv2.imshow(VIDEO_WINDOW, frame)
         key = cv2.waitKey(1)
         
         if key & 0xFF == ord('q'):
@@ -502,7 +508,7 @@ def handleFrame(frame, tracker, opts) :
             print("Capture face...")
             _faceTracker.captureFaceAsync("Pedro")
 
-    if handleFrame.capturedFrames == 40 :
+    if handleFrame.capturedFrames == 10 :
         handleFrame.fps = handleFrame.capturedFrames / (time.time() - handleFrame.start)
         handleFrame.capturedFrames = 0
         print("(processed) fps = {}".format(handleFrame.fps))
@@ -555,9 +561,8 @@ def capture(opts):
         with _frameLock :
             #copy frame handled by video capturing structure, so it won't be modified by next captures
             _frame = numpy.copy(frame)
-
             if(_frameCounter == 0) :
-                print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
+                initStream(frame, opts)
             _frameCounter += 1
             
     videoCapture.release()
@@ -585,7 +590,7 @@ def rpiCapture(opts):
             #copy frame handled by video capturing structure, so it won't be modified by next captures
             _frame = numpy.copy(frame.array)
             if(_frameCounter == 0) :
-                print("Captured image size = {}x{}".format(_frame.shape[1], _frame.shape[0]))
+                initStream(frame, opts)
             _frameCounter += 1
 
 	    # clear the stream in preparation for the next frame
@@ -593,6 +598,24 @@ def rpiCapture(opts):
         
         if _stopThreads :
             return
+
+def initStream(frame, opts) :
+    frame_h, frame_w = _frame.shape[:2]
+    print("Captured image size (height x width) = {}x{}".format(frame_h, frame_w))
+
+    if opts.video_stream :
+        monitors = get_monitors()
+        if len(monitors) == 0 :
+            print("No monitor connected, videostream won't be resized")
+        else :
+            cv2.namedWindow(VIDEO_WINDOW, cv2.WINDOW_NORMAL)
+            mon_h = monitors[0].height
+            mon_w = monitors[0].width
+            ratio = frame_h/frame_w
+            if mon_w*ratio > mon_h :
+                cv2.resizeWindow(VIDEO_WINDOW, math.floor(mon_h/ratio), mon_h)
+            else :
+                cv2.resizeWindow(VIDEO_WINDOW, mon_w, math.floor(ratio*mon_w))
 
 
 def main(argv=None):
